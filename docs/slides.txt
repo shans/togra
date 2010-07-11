@@ -1,0 +1,100 @@
+1.  Arrows Heading.  Make it cute.
+
+2.  Reference to Hughes' paper.
+
+3.  "What Hughes probably looks like"
+
+4.  Lots of arrows on the page, big question mark in the middle.
+
+5.  Definition of a monad
+(
+class Monad m where
+  return :: a -> m a
+  (>>=) :: m a -> (a -> m b) -> m b
+)
+
+6. Definition of an arrow
+(
+class Arrow a where
+  arr :: (a -> b) -> a b c
+  (>>>) :: a b c -> a c d -> a b d
+  first :: a b c -> a (b,d) (c,d)
+  -- can implement the rest in terms of arr, >>>, first
+  second :: a b c -> a (d,b) (d,c)
+  (***) :: a b c -> a d e -> a (b,d) (d,c)
+  (&&&) :: a b c -> a b d -> a b (c,d)
+)
+diagrams for these
+
+7. Definition of ArrowZero, ArrowPlus, ArrowChoice, ArrowApply
+(
+class Arrow a => ArrowZero a where
+  zero :: a b c
+
+class ArrowZero a => ArrowPlus a where
+  (+++) :: a b c -> a b c -> a b c
+
+class Arrow a => ArrowChoice a where
+  left :: a b c -> a (Either b d) (Either c d)
+  -- can implement the rest in terms of left
+  right :: a b c -> a (Either d b) (Either d c)
+  (|||) :: a b d -> a c d -> a (Either b c) d
+
+class Arrow a => ArrowApply a where
+  app :: a (a b c, b) c
+)
+
+8. Simple interpreter
+
+(
+data Exp = Var String | Add Exp Exp | If Exp Exp Exp 
+data Val = Num Int | Bl Bool 
+)
+
+(
+type Env = [String, Val)]
+)
+
+(
+eval :: Exp -> Env -> M Val
+eval :: Exp -> A Env Val
+)
+
+9. Implementation
+
+(
+eval (Var s) = arr (lookup s)
+eval (Add e1 e2) = liftA2 add (eval e1) (eval e2)
+  where add (Num u) (Num v) = Num (u + v)
+eval (If e1 e2 e3) = (eval e1 &&& arr id) >>> 
+  (arr (\(Bl b, env) -> if b then Left env else Right env) >>> (eval e2 ||| eval e3))
+)
+
+(liftA2 as popup:
+liftA2 :: Arrow a => (b -> c -> d) -> a e b -> a e c -> a e d
+liftA2 op f g = (f &&& g) >>> arr (\(b, c) -> b `op` c)
+)
+
+10. ArrowApply embeds in Monad, Monad embeds in Arrow.  Therefore equivalent?
+
+Cross out.
+
+11. slide for crazy ??? people --> crazy technical people
+
+12. Stream processor
+(
+data SP a b = Put b (SP a b) | Get (a -> SP a b)
+)
+
+(
+instance Arrow SP where
+  arr f = Get (\x -> Put (f x) (arr f))
+  sp1 >>> Put c sp2 = Put c (sp1 >>> sp2)
+  Put b sp1 >>> Get f = sp1 >>> f b
+  Get f1 >>> Get f2 = Get (\a -> f1 a >>> Get f2)
+  first f = bypass [] f
+    where
+      bypass ds (Get f) = Get (\(b,d) -> bypass ds++[d]) (f b))
+      bypass (d : ds) (Put c sp) = Put (c,d) (bypass ds sp)
+      bypass [] (Put c sp) = Get (\(b,d) -> Put (c,d) (bypass [] sp))
+)

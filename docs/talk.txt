@@ -1,0 +1,171 @@
+[slide 1] In this talk I'd like to first explain what arrows are in Haskell, then I'd like to provide a simple example, and finally I'll explain why arrows are a useful abstraction.
+
+[slide 2] I should disclose that I'm basing this talk heavily on material from John Hughes' 1998 paper, entitled 'Generalising Monads to Arrows'.  [slide 3] This is actually an awesome example of everything a computing paper should be - it's clear, concise, and approachable by people who are not already experts in the field.
+
+[slide 4] So what are arrows? I'll follow Hughe's lead and explain them in
+terms of Monads. 
+
+[slide 5] So a Monad is a sort of an abstraction of a computation, and several
+computations of the same type can be used to build up more complicated
+computations using combinators.  The actual details of the computation are
+bundled up inside the monad and applied consistently across the composite
+computations - e.g. the Maybe monad builds in cascading failures; the State
+monad builds in mutable state that's carried along with the computation; and
+the IO monad builds in sequencing for input/output.
+
+Hughes spends a lot of time at the beginning of his paper establishing why
+building libaries on top of standard abstractions such as Monads and Arrows is
+a good idea.  His basic arguments are that people only need to learn one or two
+processing abstractions, that the rules of how the abstractions should behave
+provide a framework for people to understand what combinators should do, and
+that powerful meta-libraries of combinators like liftM and mplus can be
+constructed and applied to all of the library primitive.
+
+[slide 6] An arrow is basically the same idea - an abstraction of a computation, 
+but where a monad only exposes the result of the computation, an arrow exposes
+both the input and output types.
+
+Here are the basic arrow combinators:
+
+* arr creates an arrow which represents a purely functional transformation from
+  a to b
+* >>> takes two arrows and combines them into a single arrow which represents the
+  first computation followed by the second
+* first adds a 'bypass' channel to an arrow.  As you can see in the diagram, the
+  result of (first arrow) is a new arrow that both executes the initial arrow and
+  passes through an additional value.
+* second adds a bypass channel to the left-hand side rather than the right-hand
+  side.
+* f *** g performs f on the left and g on the right 
+* f &&& g performs f on the left and g on the right, but on the same input
+
+[slide 7] Like MonadZero and MonadPlus, there's ArrowZero and ArrowPlus.  I'm
+going to skip over them today and move quickly to ArrowChoice, which gives us:
+
+* left creates an arrow that only executes on Left inputs of an Either type, and
+  passes through Right inputs unchanged
+* right does the opposite
+* f ||| g executes f for Left inputs and g for Right inputs
+
+Arrows can also be instances of ArrowApply, which requires the existence of an
+app arrow, which takes inputs of arrows and values and applies the values to
+the arrows.
+
+-----
+
+[slide 8] Here's a simple example of the use of arrows in code - a tiny interpreter lifted straight from Hughes' paper.  First we have the language:
+
+so we can have variables, we can add two variables together, we have if-then-else, we have lambda expressions, and we have the application of an expression to a lambda.
+
+We want to build a function eval that operates on the following environment type
+
+If we were doing this in Monads, we'd have:
+
+With arrows, things are a little simpler:
+
+i.e. evaluating an expression gives us a computation that turns environments
+into values.
+
+[slide 9] Here's an implementation:
+
+Evaluation of a variable simply gives an arrow that computes the value of that
+variable in the environment
+
+Evaluation of add lifts the 'add' function to the evaluation of the two
+expressions.  Here's the definition of liftA2 - you can see it simply runs the
+two provided arrows then combines them with the provided binary operator
+
+evaluation of the If expression first evaluates the conditional and passes
+through the environment, then converts the environment to a Left or Right value
+based on the conditional, then evaluates the appropriate expression using |||
+----
+
+We next come to the question of how arrows are useful.  
+
+[slide 10] In particular, it is explained in Hughes' paper that monads can be
+embedded in arrows (using Kleisli arrows), and that arrows which are instances
+of ArrowApply can be embedded in monads. Thus it would seem that the two were
+equivalent.
+
+However it turns out that there are some useful arrows for which ArrowApply
+can't be implemented, and it turns out that these arrows can not be supported
+by Monads.  
+
+[slide 11] The motivating example for Hughes' paper is an LL(1) parser that
+Swierstra and Duponcheel describe.  LL(1) means that choices between
+alternative parsers can always be resolved by looking at the next available
+token of input.  Here's a basic description:
+
+You can see that the parser has a static component, which describes the list
+of tokens that the parser can accept first, as well as whether it can accept an
+empty token sequence; and a dynamic component, which describes the output of the
+parser as well as its effect on the token stream.
+
+Here's a parser that accepts a single symbol.  You can see the static
+information (it doesn't accept an empty sequence, and only accepts an 's'
+first), and the dynamic behaviour (it consumes the single token and returns the
+rest).
+
+Now Swierstra and Duponcheel were interested in this approach to avoid a space
+leak problem with backtracking parsers - when you have alternatives that need
+access to potentially all of the token stream then that stream can't be garbage
+collected for the life of the parse.  Take for example a choice between two
+parse alternatives 'a' and 'b' - evaluating 'a' will read a sequence of symbols
+into memory which can't be cleaned up until the evaluation has finished -
+because 'a' may fail at some point in the future and require a fallback to 'b'.
+
+Here's how you implement a choice between multiple parse options using the
+LL(1) parser:
+
+You can see that, because of the static information, the choice can be made
+without recourse to the dynamic parse steps, and hence once the choice is made,
+tokens do not need to be maintained for the alternative. 
+
+Now, most of the other Monadic combinators can be implemented for this Parser
+definition, but when you try and implement bind, you run into problems.
+
+The static properties of the output parser here depend on the static properties of
+both input parsers - for example, the output parser accepts an empty sequence of
+input tokens only if both input parsers do.  However, the second input parser is
+not available without already having produced an output value from the first 
+parser, and hence implementation is impossible.
+
+What Swierstra and Duponcheel did at this point was define their own sequencing operator, which allowed them to build up their LL(1) library; however clearly what
+they defined was not a monad, which is mildly disappointing.
+
+Can this libary be implemented on arrows?  It turns out that the answer is
+yes.  For example, with a slight modification to their parser definition, we
+can both coerce that parser into an instance of arrow and implement their
+sequencing operator using arrow combinators:
+
+[slide 12] A Stream Processor is like an extension of a function - it accepts
+values, and it returns values, but there's no required one-to-one mapping
+between input and output values, and the behaviour of the processor isn't
+necessarily purely functional when considering the response to single inputs.
+
+Put here corresponds to output, and Get to input.
+
+Now you can't create a monad instance out of these - and I'd encourage everyone
+to experiment with this.  You can, however, create an arrow instance:
+
+Stream Processors can also form instances of ArrowZero, ArrowPlus and
+ArrowChoice:
+
+You can see here that we can create Stream Processors that require multiple inputs
+simultaneously using *** or &&&, and we can create Stream Processors that 
+multiplex in multiple inputs and outputs using |||.  Combinations of these and
+others can build pretty much any process you can imagine.
+
+So we've successfully modelled an abstraction that seems very non-functional at
+first using arrows.
+
+Interestingly, Stream Processors can not be instances of ArrowApply.  This is
+loosely because a stream processor can't be 'applied' to a single input but
+instead dictates a sequence of inputs that it requires and outputs that it
+generates.
+
+So I hope I've given you a rough understanding of what Arrows are and why
+they're useful.  As a teaser, I've been playing around with Arrows and OpenGL
+recently, and I think I've finally found a functional solution to a problem
+that's been bugging me on and off for years.  I'll give a talk on this at a
+future fp-syd!
