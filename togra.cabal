@@ -1,0 +1,27 @@
+Name:			Togra
+Version:		0.0
+Description:		Experimental 3D library based around streams
+License:		BSD3
+License-file:		LICENSE
+Author:			Shane Stephens
+Maintainer:		shanestephens@gmail.com
+Build-Type:		Simple
+Cabal-Version:   	>=1.2
+
+Library
+  Build-Depends:	base >= 4.0, OpenGL, StateVar, ObjectName, datetime, 
+                        GLUT
+  Extensions:		GADTs
+  Exposed-Modules:	SP, SPUtil, Vbo, Vao, Shader, TograStream, MSP, Togra
+
+Executable Sphere
+  Main-is:		examples/Sphere.hs
+  Extensions:           GADTs
+
+Executable Sphere2
+  Main-is:		examples/Sphere2.hs
+  Extensions:           GADTs
+
+Executable Sphere3
+  Main-is:		examples/Sphere3.hs
+  Extensions:           GADTs
