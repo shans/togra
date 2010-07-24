@@ -6,7 +6,7 @@ import Data.StateVar
 import Data.IORef
 import Foreign.Ptr
 import Graphics.Rendering.OpenGL
-import Monad
+import Control.Monad
 import TograUtil
 import Vao
 import Vbo
@@ -62,7 +62,6 @@ setUniform :: Uniform a => TograShader -> String -> a -> IO ()
 setUniform (TograShader program vao) name value = do
   loc <- get (uniformLocation program name)
   uniform loc $= value
-  putStrLn name
   checkGlErrors
 
 --setVarying :: VertexAttrib a => Program -> String -> Ptr a -> IO ()
@@ -77,7 +76,6 @@ setVarying (TograShader program vao) name dvbo = do
   -- is bound too
   current <- get currentProgram
   if current == Just program then bind vao else return ()
-  putStrLn name
   checkGlErrors
 
 data ShaderTag = Tag GLint VariableType String
