@@ -1,7 +1,5 @@
 module TograStream where
 
--- TODO: Move most of this out into stream utility files.
-
 import Data.DateTime
 import Graphics.Rendering.OpenGL
 import Shader
@@ -9,6 +7,7 @@ import SP
 import Togra
 import Vbo
 
+-- TODO: Move this out of here
 putM :: (Monad m) => m b -> SP m a b -> SP m a b
 putM mv r = Block (do
 	  	     v <- mv
@@ -31,56 +30,8 @@ app' f = Get (\i -> Put (fst (f i)) (snd (f i)))
 
 timeCounter :: (Monad m) => SP m DateTime Integer
 timeCounter = app' (\init -> (0, arr (timeDiffAsMillis init)))
--- timeCounter = Get (\init -> Put 0 (arr (timeDiffAsMillis init)))
 
 testArrow = (time >>> timeCounter >>> disp)	
-
-putL :: (Monad m) => [b] -> SP m a b -> SP m a b
-putL [] r = r
-putL (a:b) r = Put a (putL b r)
-
-partOfAng x n ang = fromIntegral x * ang / fromIntegral n
-
-circleGen :: (Monad m, Floating b) => Int -> SP m a (Vertex3 b)
-circleGen n = putL [Vertex3 (cos x) (sin x) 0.0 | y <- [0..(n-1)], 
-		      x <- [partOfAng y n (2.0 * pi)]] 
-			  (circleGen n)
-
-batch :: (Monad m) => Int-> SP m a [a]
-batch n = batch' n [] (batch n)
-batch' 0 l r = Put l r
-batch' n l r = Get (\a -> batch' (n - 1) (a:l) r)
-
-flatten :: (Monad m) => SP m [[a]] [a]
-flatten = arr concat
-
-sphereLineGen :: (Monad m, Floating b) => Int -> SP m a (Vertex3 b)
-sphereLineGen n = putL [Vertex3 0.0 0.0 (cos (partOfAng x (n - 1) pi)) 
-	    | x <- [0..(n-1)]] (sphereLineGen n) 
-
-sphereSliceSizeGen :: (Monad m, Floating b) => Int -> SP m a b
-sphereSliceSizeGen n = putL [sin (partOfAng x (n - 1) pi) | x <- [0..(n-1)]]
-	(sphereSliceSizeGen n)
-
-scaleExtrude :: (Monad m, Floating a) 
-    => SP m ((Vertex3 a, a), [Vertex3 a]) [Vertex3 a]
-scaleExtrude = arr (\((Vertex3 px py pz, scale), shape) ->
-      map (\(Vertex3 x y z) -> Vertex3 (px+scale*x) (py+scale*y) (pz+scale*z))
-	  shape)
-
-pairwise :: Monad m => (a -> a -> b) -> SP m a b
-pairwise f = Get (\a1 -> pairwise' f a1)
-pairwise' f a1 = Get (\a2 -> Put (f a1 a2) (pairwise' f a2))
-
-toQuads :: [a] -> [a] -> [a]
-toQuads l1 l2 = concat (zipWith toQuad ll1 ll2)
-  where
-    ll1 = zip l1 ((tail l1) ++ [head l1])
-    ll2 = zip l2 ((tail l2) ++ [head l2])
-    toQuad (a,b) (c,d) = [a,b,d,c]
-
-sphere :: (Monad m) => Int -> Int -> SP m i [Vertex3 Float]
-sphere slices segments = ((sphereLineGen slices &&& sphereSliceSizeGen slices) &&& (circleGen segments >>> batch segments)) >>> scaleExtrude >>> (pairwise toQuads) >>> batch (slices - 1) >>> flatten
 
 -- TODO: improve error message :)
 checkMatches :: DataType -> VariableType -> IO ()
