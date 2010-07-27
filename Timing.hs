@@ -40,3 +40,21 @@ display = Get (\a -> Block (do
 
 collect :: SP IO a b -> SP IO (Either a Instrumentation) b
 collect f = f ||| display
+
+fi True a b = a
+fi False a b = b
+
+fps :: Integer -> SP IO a a
+fps duration = Block (do
+  time <- getCurrentTime
+  return (fps' duration time 0))
+  where
+    fps' duration start count = Block (do
+      time <- getCurrentTime
+      let endPeriod = addSeconds duration start
+      let afterEnd = time > endPeriod
+      if afterEnd 
+	then putStrLn (show ((fromIntegral count) / (fromIntegral duration)))
+	else return ()
+      let next = fi afterEnd (fps' duration endPeriod 0) (fps' duration start (count + 1))
+      return (Get (\a -> Put a next)))
