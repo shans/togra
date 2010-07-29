@@ -6,4 +6,4 @@ import MSP
 
 main = do
   putStrLn (show $ sphereMA 100 100)
-  togra 640 480 (tograIn ((eval $ sphereMA 100 100) >>> fps 5 >>> arr (\a -> (a,a))))
+  togra 640 480 (\t -> (tograMIn (sphereMA 100 100 >>> Arr (\a -> (a,a))) t) >>> fps 5)

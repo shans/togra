@@ -4,6 +4,7 @@ import Data.DateTime
 import Graphics.Rendering.OpenGL
 import Shader
 import SP
+import MSP
 import Togra
 import Vbo
 
@@ -38,6 +39,7 @@ checkMatches :: DataType -> VariableType -> IO ()
 checkMatches Float FloatVec3 = return ()
 checkMatches a b = do error ((show a) ++ " doesn't match " ++ (show b))
 
+-- builds a TograInput DataStream object from a ShaderTag and a buffer
 makeDataStreamInput :: (Show a, GlTypable a) => 
 	ShaderTag -> BufferTarget -> BufferUsage -> [a] -> IO TograInput
 makeDataStreamInput tag target usage l = do
@@ -45,6 +47,9 @@ makeDataStreamInput tag target usage l = do
   checkMatches (getVBOType dvbo) (getTagType tag)
   return $ DataStream tag dvbo
 
+-- TODO: rewrite this when shaders live outside of Togra's core.
+-- Creates an SP that converts two lists into TograInput objects, based
+-- around the default shader.
 assocShaders :: (Show a, GlTypable a, Show b, GlTypable b) =>
     [ShaderTag] -> SP IO ([a],[b]) TograInput
 assocShaders activeTags = Get (\(a, b) -> Block (
@@ -55,5 +60,19 @@ assocShaders activeTags = Get (\(a, b) -> Block (
   -- how can we make this dynamic?
   tag1:tag2:[] = activeTags
 
+assocShaderOnce :: (Show a, GlTypable a, Show b, GlTypable b) =>
+    [ShaderTag] -> SP IO ([a],[b]) TograInput
+assocShaderOnce activeTags = Get (\(a, b) -> Block (
+      do
+	ti1 <- makeDataStreamInput tag1 ArrayBuffer StaticDraw a
+	ti2 <- makeDataStreamInput tag2 ArrayBuffer StaticDraw b
+	return $ alwaysPut ti1 ti2)) where
+  tag1:tag2:[] = activeTags
+  alwaysPut v1 v2 = Put v1 (Put v2 (alwaysPut v1 v2))
+
 --tograIn :: SP IO () ([a], [b]) -> [ShaderTag] -> SP IO () TograInput
 tograIn s t = s >>> (assocShaders t)
+
+-- use an MSP and optimise if possible.
+tograMIn (In l) t = eval (In l) >>> (assocShaderOnce t)
+tograMIn msp t = eval msp >>> (assocShaders t)
