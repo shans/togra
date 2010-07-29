@@ -4,6 +4,7 @@ import Data.DateTime
 import Graphics.Rendering.OpenGL
 import Shader
 import SP
+import SPUtil
 import MSP
 import Togra
 import Vbo
@@ -56,7 +57,8 @@ assocShaders activeTags = Get (\(a, b) -> Block (
       do
 	ti1 <- makeDataStreamInput tag1 ArrayBuffer StaticDraw a
 	ti2 <- makeDataStreamInput tag2 ArrayBuffer StaticDraw b
-	return $ Put ti1 (Put ti2 (assocShaders activeTags)))) where
+	return $ putL [ti1, ti2, RenderPrimitive Quads, End] 
+		  (assocShaders activeTags))) where
   -- how can we make this dynamic?
   tag1:tag2:[] = activeTags
 
@@ -66,9 +68,8 @@ assocShaderOnce activeTags = Get (\(a, b) -> Block (
       do
 	ti1 <- makeDataStreamInput tag1 ArrayBuffer StaticDraw a
 	ti2 <- makeDataStreamInput tag2 ArrayBuffer StaticDraw b
-	return $ alwaysPut ti1 ti2)) where
+	return $ rPutL [ti1, ti2, RenderPrimitive Quads, End])) where
   tag1:tag2:[] = activeTags
-  alwaysPut v1 v2 = Put v1 (Put v2 (alwaysPut v1 v2))
 
 --tograIn :: SP IO () ([a], [b]) -> [ShaderTag] -> SP IO () TograInput
 tograIn s t = s >>> (assocShaders t)

@@ -2,6 +2,7 @@ module Timing where
 
 import Data.DateTime
 import SP
+import TograUtil
 
 data Tag = IGet | IPut | IBlock 
   deriving Show
@@ -40,9 +41,6 @@ display = Get (\a -> Block (do
 
 collect :: SP IO a b -> SP IO (Either a Instrumentation) b
 collect f = f ||| display
-
-fi True a b = a
-fi False a b = b
 
 fps :: Integer -> SP IO a a
 fps duration = Block (do

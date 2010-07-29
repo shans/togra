@@ -14,3 +14,7 @@ checkGlErrors :: IO ()
 checkGlErrors = do
   e <- get errors
   check (e == []) (return (concat (map show e)))
+
+fi True a b = a
+fi False a b = b
+

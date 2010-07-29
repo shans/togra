@@ -1,5 +1,5 @@
 module Shader (prepareShaders, setUniform, setVarying, bind, unbind,
-               ShaderTag(Tag), getTagType, shaderTags) where
+               ShaderTag(Tag), getTagType, shaderTags, TograShader) where
 
 import Data.ObjectName
 import Data.StateVar

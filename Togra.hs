@@ -1,6 +1,7 @@
 module Togra where
 
 import Data.IORef
+import Control.Monad
 import Graphics.Rendering.OpenGL
 import Graphics.UI.GLUT
 import Shader
@@ -9,7 +10,9 @@ import SP
 import TograUtil
 import Vbo
 
-data TograInput = DataStream ShaderTag DVBO   
+data TograInput = DataStream ShaderTag DVBO
+		| RenderPrimitive PrimitiveMode
+		| End 
 
 togra :: GLsizei -> GLsizei -> ([ShaderTag] -> SP IO () TograInput) -> IO ()
 togra w h stream = do 
@@ -59,17 +62,32 @@ getAndUpdate ref = do
   ref $= s'
   return v
 
+-- Going to have to fudge the size here for now.  Basically it should
+-- be a property of the shader and the shadertag I think?
+act :: TograShader -> IORef Int -> IORef (SP IO a TograInput) -> IO ()
+act program size streamRef = do
+  val <- getAndUpdate streamRef
+  isEnd <- act' val
+  fi isEnd (return ()) (act program size streamRef)
+  return ()
+    where
+      act' (DataStream (Tag n t s) dvbo) = do
+	setVarying program s dvbo
+	size $= getVBOSize dvbo
+	return False
+      act' (RenderPrimitive mode) = do
+	sizeVal <- get size
+	drawArrays mode 0 (fromIntegral sizeVal)
+	return False
+      act' End = do
+	return True
+
 display program streamRef = do
   clear [ ColorBuffer, DepthBuffer ]
   loadIdentity
   translate (Vector3 0.0 0.0 (-6.0 :: GLfloat))
-  -- how do we know how many?
-  (DataStream (Tag n t s) dvbo) <- getAndUpdate streamRef
-  setVarying program s dvbo
-  (DataStream (Tag n t s) dvbo) <- getAndUpdate streamRef
-  setVarying program s dvbo
-  let l = getVBOSize dvbo
-  drawArrays Quads 0 (fromIntegral l)
+  size <- newIORef 0
+  act program size streamRef
   checkGlErrors
   swapBuffers
   postRedisplay Nothing
