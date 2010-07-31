@@ -3,6 +3,7 @@ module Timing where
 import Data.DateTime
 import SP
 import TograUtil
+import TograStream
 
 data Tag = IGet | IPut | IBlock 
   deriving Show
@@ -56,3 +57,7 @@ fps duration = Block (do
 	else return ()
       let next = fi afterEnd (fps' duration endPeriod 0) (fps' duration start (count + 1))
       return (Get (\a -> Put a next)))
+
+tograInT period s = tograIn (s >>> fps period)
+
+tograMInT period msp m t = tograMIn msp m t >>> fps period
