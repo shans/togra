@@ -48,6 +48,8 @@ makeDataStreamInput tag target usage l = do
   checkMatches (getVBOType dvbo) (getTagType tag)
   return $ DataStream tag dvbo
 
+clearDataStreamInput (DataStream tag dvbo) = freeDataFromVBO dvbo
+
 -- TODO: rewrite this when shaders live outside of Togra's core.
 -- Creates an SP that converts two lists into TograInput objects, based
 -- around the default shader.
@@ -58,9 +60,13 @@ assocShaders activeTags mode = Get (\(a, b) -> Block (
 	ti1 <- makeDataStreamInput tag1 ArrayBuffer StaticDraw a
 	ti2 <- makeDataStreamInput tag2 ArrayBuffer StaticDraw b
 	return $ putL [ti1, ti2, RenderPrimitive mode, End] 
-		  (assocShaders activeTags mode))) where
+		  (freeData ti1 ti2))) where
   -- how can we make this dynamic?
   tag1:tag2:[] = activeTags
+  freeData ti1 ti2 = Block (do
+    clearDataStreamInput ti1
+    clearDataStreamInput ti2
+    return $ assocShaders activeTags mode) 
 
 assocShaderOnce :: (Show a, GlTypable a, Show b, GlTypable b) =>
     [ShaderTag] -> PrimitiveMode -> SP IO ([a],[b]) TograInput

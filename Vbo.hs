@@ -52,11 +52,17 @@ putData vboObj l = do
   let aData = head l
   return (DVBO vboObj (glType aData) (multiplier aData) (len * multiplier aData))
 
+-- consider using mapBuffer and unmapBuffer here instead?
 makeVBOWithData :: (Show a, GlTypable a) => BufferTarget -> BufferUsage -> [a] -> IO DVBO
 makeVBOWithData target usage l = do
   vbo <- makeVBO target usage
   dvbo <- putData vbo l
   return dvbo
+
+freeDataFromVBO :: DVBO -> IO ()
+freeDataFromVBO (DVBO (VBO bo bt bu) dt _ _) = do
+  (_, ptr, _) <- get $ bufferData bt
+  free ptr
 
 getVBOType :: DVBO -> DataType
 getVBOType (DVBO _ dt _ _) = dt
