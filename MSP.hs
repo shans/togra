@@ -76,6 +76,22 @@ circleGenMA n = In [0..(n-1)] >>> Arr (partOfAng (2 * pi) n) >>>
 
 concatMA = Arr concat
 
+class Interpolatable a where
+  interp :: Float -> a -> a -> a
+
+instance Interpolatable Float where
+  interp f a b = a*f + (1-b)*f
+
+instance Interpolatable a => Interpolatable (Vertex3 a) where
+  interp f (Vertex3 sx sy sz) (Vertex3 ex ey ez) =
+    Vertex3 (interp f sx ex) (interp f sy ey) (interp f sz ez)
+
+interpolate :: (Interpolatable b) => Int -> b -> b -> MSP Int b 
+interpolate size start end = Arr (\a -> interp (fromIntegral a / fromIntegral size) start end)
+
+line :: Int -> Vertex3 Float -> Vertex3 Float -> MSP a (Vertex3 Float)
+line pieces start end = In [0..(pieces-1)] >>> interpolate (pieces-1) start end
+
 sphereLineGenMA' n = ESP (0 ..& (n-1)) >>> Arr (partOfAng pi (n - 1)) >>>
 		     vertex3FunMA (\a -> 0) (\a -> 0) cos
 sphereLineGenMA n = In [0..(n-1)] >>> Arr (partOfAng pi (n - 1)) >>>

@@ -25,3 +25,7 @@ Executable Sphere2
 Executable Sphere3
   Main-is:		examples/Sphere3.hs
   Extensions:           GADTs
+
+Executable Line
+  Main-is:		examples/Line.hs
+  Extensions:        	GADTs
