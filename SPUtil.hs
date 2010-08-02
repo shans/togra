@@ -63,3 +63,16 @@ pairwiseL f (a:b:l) = (f a b):(pairwiseL f (b:l))
 
 sphere :: (Monad m) => Int -> Int -> SP m i [Vertex3 Float]
 sphere slices segments = ((sphereLineGen slices &&& sphereSliceSizeGen slices) &&& (circleGen segments >>> batch segments)) >>> scaleExtrude >>> (pairwise toQuads) >>> batch (slices - 1) >>> concatA
+
+lift :: Monad m => (a -> SP m b c) -> SP m (Either a b) c
+lift f = lift' onlyGet where
+  lift' (Put v sp) = Put v (lift' sp)
+  lift' sp = Get (lift'' sp)
+  lift'' sp (Left a) = lift' (f a)
+  lift'' (Get fsp) (Right b) = lift' (fsp b)
+  onlyGet = Get (\_ -> onlyGet)
+
+printSP :: Show a => SP IO a a
+printSP = Get (\a -> Block(do
+  putStrLn (show a)
+  return (Put a printSP)))

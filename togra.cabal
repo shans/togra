@@ -12,7 +12,8 @@ Library
   Build-Depends:	base >= 4.0, OpenGL, StateVar, ObjectName, datetime, 
                         GLUT
   Extensions:		GADTs
-  Exposed-Modules:	SP, SPUtil, Vbo, Vao, Shader, TograStream, MSP, Togra
+  Exposed-Modules:	SP, SPUtil, Vbo, Vao, Shader, TograStream, MSP, Togra,
+                        Path
 
 Executable Sphere
   Main-is:		examples/Sphere.hs
@@ -29,3 +30,7 @@ Executable Sphere3
 Executable Line
   Main-is:		examples/Line.hs
   Extensions:        	GADTs
+
+Executable Bezier
+  Main-is:		examples/Bezier.hs
+  Extensions:		GADTs
