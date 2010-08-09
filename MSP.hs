@@ -10,7 +10,7 @@ import SPUtil
 data MSP a b where
     In :: [b] -> MSP a b
     Lift :: (a -> MSP b c) -> MSP (Either a b) c
-    Batch :: Int -> MSP a [a]
+    Batch :: Int -> ([a] -> b) -> MSP a b
     Arr :: (a -> b) -> MSP a b
     First :: MSP a b -> MSP (a,c) (b,c)
     Dot :: MSP b c -> MSP a b -> MSP a c
@@ -24,7 +24,7 @@ instance Show (MSP a b) where
   show (Dot b a) = (show a) ++ " >>> " ++ (show b)
   show (ESP a) = "-!->"
   show (Par a b) = "(" ++ show a ++ " &&& " ++ show b ++ ")"
-  show (Batch n) = "-<" ++ (show n) ++ ">->"
+  show (Batch n f) = "-<" ++ (show n) ++ ">->"
   show (Lift f) = "-O->"
 
 split :: Int -> [a] -> [[a]]
@@ -42,9 +42,13 @@ modBatch n l = split n (times m l)
 
 instance Category MSP where
   id = Arr id
+  -- these are our rewrite rules.  These make MSPs more efficient by
+  -- precalculating data arrays where possible.
   (Arr g) . (Arr f) = Arr (g . f)
   (Arr f) . (In vl) = In (map f vl)
-  (Batch n) . (In vl) = In (modBatch n vl)
+  (Batch n f) . (In vl) = In (map f (modBatch n vl))
+  (Arr g) . (Batch n f) = Batch n (g . f)
+  (Batch n g) . (Arr f) = Batch n (g . map f)
   b . a = Dot b a
 
 modAnd :: [a] -> [b] -> [(a, b)]
@@ -67,7 +71,7 @@ eval (Dot b a) = (eval a) >>> (eval b)
 eval (First a) = first (eval a)
 eval (ESP a) = a
 eval (Par a b) = (eval a) &&& (eval b)
-eval (Batch n) = batch n
+eval (Batch n f) = batch n >>> arr f
 eval (Lift f) = lift (\a -> eval (f a))
 
 -- TODO: move a lot of this out of here and rename - the MSP variants
@@ -102,8 +106,15 @@ sphereMA' slices segments =
     (circleGenMA' segments >>> ESP (batch segments))) >>> scaleExtrudeMA >>>
       ESP (pairwise toQuads) >>> ESP (batch (slices - 1)) >>> concatMA
 
+-- extra parens needed because >>> associates RTL.  This means we have
+-- In >>> Arr >>> Batch >>> Arr, but we need to collapse In >>> Arr first,
+-- then In >>> Batch, then In >>> Arr.
+-- 
+-- I can't see how to do this without a BatchArr primitive.  However,
+-- Batch >>> Arr and Arr >>> Batch would both collapse to this.  In fact, we
+-- could replace the idea of Batch with BatchArr.
 sphereMA :: Int -> Int -> MSP i [Vertex3 Float]
 sphereMA slices segments = 
-  ((((sphereLineGenMA slices &&& sphereSliceSizeGenMA slices) &&&
-    (circleGenMA segments >>> Batch segments)) >>> scaleExtrudeMA) >>> 
-      Batch (slices)) >>> Arr (pairwiseL toQuads) >>> concatMA
+  ((sphereLineGenMA slices &&& sphereSliceSizeGenMA slices) &&&
+    (circleGenMA segments >>> Batch segments id)) >>> scaleExtrudeMA >>> 
+      Batch (slices) id >>> Arr (pairwiseL toQuads) >>> concatMA
