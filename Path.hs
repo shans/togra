@@ -8,7 +8,7 @@ class Interpolatable a where
   interp :: Float -> a -> a -> a
 
 instance Interpolatable Float where
-  interp f a b = a*f + (1-b)*f
+  interp f a b = a*f + b*(1-f)
 
 instance Interpolatable a => Interpolatable (Vertex3 a) where
   interp f (Vertex3 sx sy sz) (Vertex3 ex ey ez) =

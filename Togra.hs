@@ -110,11 +110,3 @@ setShaderDefaults program = do
   setUniform program "Material.ambient" (vertex4 0.2 0.2 0.2 1.0)
   --setUniform program "Material.shininess" (10.0 :: GLfloat)
   setUniform program "Material.specular" (vertex4 1.0 1.0 1.0 1.0)
-  --let d = [Vertex3 (-1.0 :: Float) (-1.0) 0.0, 
-  --	   Vertex3 (-1.0) 1.0 0.0, 
-  --	   Vertex3 1.0 1.0 0.0,
-  --	   Vertex3 1.0 (-1.0) 0.0]
-  --dvbo <- makeVBOWithData ArrayBuffer StaticDraw d 
-  --setVarying program "VertexPosition" dvbo
-  --setVarying program "VertexNormal" dvbo
-  --return ()  

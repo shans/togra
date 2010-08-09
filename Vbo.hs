@@ -50,7 +50,7 @@ putData vboObj l = do
   let (VBO vbo target usage) = vboObj
   bufferData target $= (fromIntegral (len * sizeOf (head l)), dataPtr, usage)
   let aData = head l
-  return (DVBO vboObj (glType aData) (multiplier aData) (len * multiplier aData))
+  return (DVBO vboObj (glType aData) (multiplier aData) len)
 
 -- consider using mapBuffer and unmapBuffer here instead?
 makeVBOWithData :: (Show a, GlTypable a) => BufferTarget -> BufferUsage -> [a] -> IO DVBO
