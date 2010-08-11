@@ -26,12 +26,11 @@ v3t f (Vertex3 a b c) = Vertex3 (f a) (f b) (f c)
 (+!+) :: Vertex3 Float -> Vertex3 Float -> Vertex3 Float
 (Vertex3 a b c) +!+ (Vertex3 d e f) = Vertex3 (a+d) (b+e) (c+f)
 
-bezier' :: [Vertex3 Float] -> MSP Int [Vertex3 Float]
+bezier' :: [Vertex3 Float] -> MSP Float (Vertex3 Float)
 bezier' basis = Arr (bezier'')
   where
-    bezier'' :: Int -> [Vertex3 Float]
-    bezier'' s = map (bezier''' basis 0) (inputs s)
-    inputs s = [fromIntegral x / fromIntegral (s-1) | x <- [0..(s-1)]]
+    bezier'' :: Float -> Vertex3 Float
+    bezier'' s = bezier''' basis 0 s
     size = length basis
     bezier''' [] _ _ = Vertex3 0.0 0.0 0.0
     bezier''' (h:r) j t = (v3t (\a -> a * (t^j) * ((1-t)^(size-j-1)) * 
@@ -42,4 +41,4 @@ bezier' basis = Arr (bezier'')
 
 --  A generalized bezier that takes in a list of control points.
 bezier = Lift bezier'
-      
+

@@ -64,6 +64,10 @@ instance Arrow MSP where
   (In v1) &&& (In v2) = In (modAnd v1 v2)
   a &&& b = Par a b
 
+instance ArrowChoice MSP where
+  left a = Arr (\a -> Left a)
+  right a = Arr (\a -> Right a)
+
 eval :: MSP a b -> SP IO a b
 eval (In vl) = rPutL vl
 eval (Arr f) = arr f
@@ -118,3 +122,4 @@ sphereMA slices segments =
   ((sphereLineGenMA slices &&& sphereSliceSizeGenMA slices) &&&
     (circleGenMA segments >>> Batch segments id)) >>> scaleExtrudeMA >>> 
       Batch (slices) id >>> Arr (pairwiseL toQuads) >>> concatMA
+
