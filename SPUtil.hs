@@ -29,6 +29,11 @@ batch n = batch' n [] (batch n)
 batch' 0 l r = Put l r
 batch' n l r = Get (\a -> batch' (n - 1) (a:l) r)
 
+unbatch :: (Monad m) => SP m [a] a
+unbatch = Get (\a -> unbatch' a)
+unbatch' [] = unbatch
+unbatch' (h:t) = Put h (unbatch' t)
+
 concatA :: (Monad m) => SP m [[a]] [a]
 concatA = arr concat
 

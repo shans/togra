@@ -34,3 +34,7 @@ Executable Line
 Executable Bezier
   Main-is:		examples/Bezier.hs
   Extensions:		GADTs
+
+Executable Bezier2
+  Main-is:		examples/Bezier2.hs
+  Extensions:		GADTs

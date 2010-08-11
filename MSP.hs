@@ -11,6 +11,7 @@ data MSP a b where
     In :: [b] -> MSP a b
     Lift :: (a -> MSP b c) -> MSP (Either a b) c
     Batch :: Int -> ([a] -> b) -> MSP a b
+    Unbatch :: (a -> b) -> MSP [a] b
     Arr :: (a -> b) -> MSP a b
     First :: MSP a b -> MSP (a,c) (b,c)
     Dot :: MSP b c -> MSP a b -> MSP a c
@@ -25,6 +26,7 @@ instance Show (MSP a b) where
   show (ESP a) = "-!->"
   show (Par a b) = "(" ++ show a ++ " &&& " ++ show b ++ ")"
   show (Batch n f) = "-<" ++ (show n) ++ ">->"
+  show (Unbatch f) = "-><->"
   show (Lift f) = "-O->"
 
 split :: Int -> [a] -> [[a]]
@@ -49,6 +51,10 @@ instance Category MSP where
   (Batch n f) . (In vl) = In (map f (modBatch n vl))
   (Arr g) . (Batch n f) = Batch n (g . f)
   (Batch n g) . (Arr f) = Batch n (g . map f)
+  (Unbatch f) . (In vl) = In (map f (concat vl))
+  (Arr g) . (Unbatch f) = Unbatch (g . f)
+  -- TODO: Add collapse rule for Unbatch >>> Batch and Batch >>> Unbatch
+  -- TODO: figure out if Lift can be collapsed, and how
   b . a = Dot b a
 
 modAnd :: [a] -> [b] -> [(a, b)]
@@ -64,10 +70,6 @@ instance Arrow MSP where
   (In v1) &&& (In v2) = In (modAnd v1 v2)
   a &&& b = Par a b
 
-instance ArrowChoice MSP where
-  left a = Arr (\a -> Left a)
-  right a = Arr (\a -> Right a)
-
 eval :: MSP a b -> SP IO a b
 eval (In vl) = rPutL vl
 eval (Arr f) = arr f
@@ -76,6 +78,7 @@ eval (First a) = first (eval a)
 eval (ESP a) = a
 eval (Par a b) = (eval a) &&& (eval b)
 eval (Batch n f) = batch n >>> arr f
+eval (Unbatch f) = unbatch >>> arr f
 eval (Lift f) = lift (\a -> eval (f a))
 
 -- TODO: move a lot of this out of here and rename - the MSP variants

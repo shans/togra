@@ -40,5 +40,25 @@ bezier' basis = Arr (bezier'')
     prodxy x y = product[x..y]
 
 --  A generalized bezier that takes in a list of control points.
+bezier :: MSP (Either [Vertex3 Float] Float) (Vertex3 Float)
 bezier = Lift bezier'
 
+-- in order to use beziers and other lifted functions we need to be able to
+-- sequence inputs.  We desire in [Left a, Left b, Left c, Right d, ...]
+-- I'd like to express this as
+-- seq (map toLeft [a,b,c]) >>> seq (map toRight [d,e,f]) >>> bezier
+-- 
+-- This would mean that seq takes all upstream inputs first, then all
+-- local inputs.  However, this in turn means that seq only generates
+-- a single set of inputs, not a loop of inputs like In.  So we actually
+-- need seq to operate at the list level and only generate a single output:
+-- In [map toLeft [a,b,c]] >>> seq (map toRight [d,e,f]) >>> unbatch >>> bezier
+
+seqArr :: [a] -> MSP [a] [a]
+seqArr e = Arr (\a -> a ++ e)
+
+toRight a = Right a
+toLeft a = Left a
+
+aThenb :: [a] -> [b] -> MSP c (Either a b)
+aThenb a b = In [map toLeft a] >>> seqArr (map toRight b) >>> Unbatch id
