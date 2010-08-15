@@ -6,13 +6,16 @@ import Control.Arrow
 import Graphics.Rendering.OpenGL
 import SP
 import SPUtil
+import System.IO.Unsafe
 
 data MSP a b where
     In :: [b] -> MSP a b
-    --Lift :: (a -> MSP b c) -> MSP (Either a b) c
+    -- TODO: Consider adding a primitive which is a foo_plus_function, to
+    -- eliminate the need for functions with FApp, Batch and Unbatch.
     App :: MSP (Either (MSP a b) a) b
-    Batch :: Int -> ([a] -> b) -> MSP a b
-    Unbatch :: (a -> b) -> MSP [a] b
+    FApp :: MSP (Either (a -> b) a) b 
+    Batch :: Int -> MSP a [a]
+    Unbatch :: MSP [a] a
     Arr :: (a -> b) -> MSP a b
     First :: MSP a b -> MSP (a,c) (b,c)
     Dot :: MSP b c -> MSP a b -> MSP a c
@@ -23,12 +26,13 @@ instance Show (MSP a b) where
   show (In v) = "|->"
   show (Arr f) = "->"
   show (First f) = "-l->"
-  show (Dot b a) = (show a) ++ " >>> " ++ (show b)
+  show (Dot b a) =  "(" ++ (show a) ++ " >>> " ++ (show b) ++ ")"
   show (ESP a) = "-!->"
   show (Par a b) = "(" ++ show a ++ " &&& " ++ show b ++ ")"
-  show (Batch n f) = "-<" ++ (show n) ++ ">->"
-  show (Unbatch f) = "-><->"
+  show (Batch n) = "-<" ++ (show n) ++ ">->"
+  show (Unbatch) = "-><->"
   show (App) = "-O->"
+  show (FApp) = "-(!)->"
 
 split :: Int -> [a] -> [[a]]
 split n [] = []
@@ -43,17 +47,21 @@ modBatch n l = split n (times m l)
   where
     m = div (lcm n (length l)) (length l)
 
+fApp :: (a -> b) -> [Either (a -> b) a] -> [b]
+fApp f [] = []
+fApp f ((Right v):r) = (f v):(fApp f r)
+fApp g ((Left f):r) = fApp f r
+
 instance Category MSP where
   id = Arr id
   -- these are our rewrite rules.  These make MSPs more efficient by
   -- precalculating data arrays where possible.
   (Arr g) . (Arr f) = Arr (g . f)
   (Arr f) . (In vl) = In (map f vl)
-  (Batch n f) . (In vl) = In (map f (modBatch n vl))
-  (Arr g) . (Batch n f) = Batch n (g . f)
-  (Batch n g) . (Arr f) = Batch n (g . map f)
-  (Unbatch f) . (In vl) = In (map f (concat vl))
-  (Arr g) . (Unbatch f) = Unbatch (g . f)
+  (Batch n) . (In vl) = In (modBatch n vl)
+  (Unbatch) . (In vl) = In (concat vl)
+  FApp . (In vl) = In (fApp (\a -> error "no function yet") vl)
+  (Dot c b) . a = c . (b . a)
   -- TODO: Add collapse rule for Unbatch >>> Batch and Batch >>> Unbatch
   -- TODO: figure out if Lift can be collapsed, and how
   b . a = Dot b a
@@ -86,9 +94,10 @@ eval (Dot b a) = (eval a) >>> (eval b)
 eval (First a) = first (eval a)
 eval (ESP a) = a
 eval (Par a b) = (eval a) &&& (eval b)
-eval (Batch n f) = batch n >>> arr f
-eval (Unbatch f) = unbatch >>> arr f
+eval (Batch n) = batch n
+eval (Unbatch) = unbatch
 eval App = liftSP (\a -> eval a)
+eval FApp = liftSP (\a -> arr a)
 
 -- TODO: move a lot of this out of here and rename - the MSP variants
 -- should be undecorated, and where required for demonstration purposes
@@ -132,6 +141,6 @@ sphereMA' slices segments =
 sphereMA :: Int -> Int -> MSP i [Vertex3 Float]
 sphereMA slices segments = 
   ((sphereLineGenMA slices &&& sphereSliceSizeGenMA slices) &&&
-    (circleGenMA segments >>> Batch segments id)) >>> scaleExtrudeMA >>> 
-      Batch (slices) id >>> Arr (pairwiseL toQuads) >>> concatMA
+    (circleGenMA segments >>> Batch segments)) >>> scaleExtrudeMA >>> 
+      Batch slices >>> Arr (pairwiseL toQuads) >>> concatMA
 

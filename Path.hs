@@ -26,26 +26,33 @@ v3t f (Vertex3 a b c) = Vertex3 (f a) (f b) (f c)
 (+!+) :: Vertex3 Float -> Vertex3 Float -> Vertex3 Float
 (Vertex3 a b c) +!+ (Vertex3 d e f) = Vertex3 (a+d) (b+e) (c+f)
 
-bezier' :: [Vertex3 Float] -> MSP Float (Vertex3 Float)
-bezier' basis = Arr (bezier'')
+bezierF :: [Vertex3 Float] -> Float -> Vertex3 Float
+bezierF basis s = bezier' basis 0 s
   where
-    bezier'' :: Float -> Vertex3 Float
-    bezier'' s = bezier''' basis 0 s
     size = length basis
-    bezier''' [] _ _ = Vertex3 0.0 0.0 0.0
-    bezier''' (h:r) j t = (v3t (\a -> a * (t^j) * ((1-t)^(size-j-1)) * 
-	     fromIntegral (binom j (size-1))) h) +!+ bezier''' r (j+1) t
+    bezier' [] _ _ = Vertex3 0.0 0.0 0.0
+    bezier' (h:r) j t = (v3t (\a -> a * (t^j) * ((1-t)^(size-j-1)) * 
+	     fromIntegral (binom j (size-1))) h) +!+ bezier' r (j+1) t
     binom y x = div (prodxy y (x-1)) (prodxy 1 (x-y-1))
     prodxy 0 y = prodxy 1 y
     prodxy x y = product[x..y]
 
+bezierPatchF :: [Vertex3 Float] -> [Vertex3 Float] -> Float -> Float -> 
+		Vertex3 Float
+bezierPatchF a b c d = Vertex3 1.0 1.0 1.0  
+
+bezier' :: [Vertex3 Float] -> MSP Float (Vertex3 Float)
+bezier' basis = Arr (bezierF basis)
 
 lift :: (a -> MSP b c) -> MSP (Either a b) c
 lift f = left (Arr f) >>> App 
 
+liftF :: (a -> b -> c) -> MSP (Either a b) c
+liftF f = Arr (left f) >>> FApp
+
 --  A generalized bezier that takes in a list of control points.
 bezier :: MSP (Either [Vertex3 Float] Float) (Vertex3 Float)
-bezier = lift bezier'
+bezier = liftF bezierF
 
 -- in order to use beziers and other lifted functions we need to be able to
 -- sequence inputs.  We desire in [Left a, Left b, Left c, Right d, ...]
@@ -62,4 +69,6 @@ seqArr :: [a] -> MSP [a] [a]
 seqArr e = Arr (\a -> a ++ e)
 
 aThenb :: [a] -> [b] -> MSP c (Either a b)
-aThenb a b = In [map toLeft a] >>> seqArr (map toRight b) >>> Unbatch id
+aThenb a b = In [map toLeft a] >>> seqArr (map toRight b) >>> Unbatch
+
+bezierPatch = left (left (liftF bezierPatchF) >>> FApp) >>> FApp
