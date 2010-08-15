@@ -45,6 +45,7 @@ sphereSliceSizeGen :: (Monad m, Floating b) => Int -> SP m a b
 sphereSliceSizeGen n = 0 ..& (n - 1) >>> arr (partOfAng pi (n - 1)) >>> arr sin
 
 -- TODO: recast in terms of vertex algebra
+-- TODO rename these as "SP" versions (or Prim or something)
 scaleExtrude :: (Monad m, Floating a) 
     => SP m ((Vertex3 a, a), [Vertex3 a]) [Vertex3 a]
 scaleExtrude = arr (\((Vertex3 px py pz, scale), shape) ->
@@ -69,8 +70,8 @@ pairwiseL f (a:b:l) = (f a b):(pairwiseL f (b:l))
 sphere :: (Monad m) => Int -> Int -> SP m i [Vertex3 Float]
 sphere slices segments = ((sphereLineGen slices &&& sphereSliceSizeGen slices) &&& (circleGen segments >>> batch segments)) >>> scaleExtrude >>> (pairwise toQuads) >>> batch (slices - 1) >>> concatA
 
-lift :: Monad m => (a -> SP m b c) -> SP m (Either a b) c
-lift f = lift' onlyGet where
+liftSP :: Monad m => (a -> SP m b c) -> SP m (Either a b) c
+liftSP f = lift' onlyGet where
   lift' (Put v sp) = Put v (lift' sp)
   lift' sp = Get (lift'' sp)
   lift'' sp (Left a) = lift' (f a)

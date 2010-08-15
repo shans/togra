@@ -9,7 +9,8 @@ import SPUtil
 
 data MSP a b where
     In :: [b] -> MSP a b
-    Lift :: (a -> MSP b c) -> MSP (Either a b) c
+    --Lift :: (a -> MSP b c) -> MSP (Either a b) c
+    App :: MSP (Either (MSP a b) a) b
     Batch :: Int -> ([a] -> b) -> MSP a b
     Unbatch :: (a -> b) -> MSP [a] b
     Arr :: (a -> b) -> MSP a b
@@ -27,7 +28,7 @@ instance Show (MSP a b) where
   show (Par a b) = "(" ++ show a ++ " &&& " ++ show b ++ ")"
   show (Batch n f) = "-<" ++ (show n) ++ ">->"
   show (Unbatch f) = "-><->"
-  show (Lift f) = "-O->"
+  show (App) = "-O->"
 
 split :: Int -> [a] -> [[a]]
 split n [] = []
@@ -70,6 +71,14 @@ instance Arrow MSP where
   (In v1) &&& (In v2) = In (modAnd v1 v2)
   a &&& b = Par a b
 
+toRight a = Right a
+toLeft a = Left a
+
+instance ArrowChoice MSP where
+  left (Arr f) = Arr (either (toLeft . f) toRight)
+  left v = ESP (left (eval v))
+  right (Arr f) = Arr (either toLeft (toRight . f))
+
 eval :: MSP a b -> SP IO a b
 eval (In vl) = rPutL vl
 eval (Arr f) = arr f
@@ -79,7 +88,7 @@ eval (ESP a) = a
 eval (Par a b) = (eval a) &&& (eval b)
 eval (Batch n f) = batch n >>> arr f
 eval (Unbatch f) = unbatch >>> arr f
-eval (Lift f) = lift (\a -> eval (f a))
+eval App = liftSP (\a -> eval a)
 
 -- TODO: move a lot of this out of here and rename - the MSP variants
 -- should be undecorated, and where required for demonstration purposes

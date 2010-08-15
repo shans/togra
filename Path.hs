@@ -39,9 +39,13 @@ bezier' basis = Arr (bezier'')
     prodxy 0 y = prodxy 1 y
     prodxy x y = product[x..y]
 
+
+lift :: (a -> MSP b c) -> MSP (Either a b) c
+lift f = left (Arr f) >>> App 
+
 --  A generalized bezier that takes in a list of control points.
 bezier :: MSP (Either [Vertex3 Float] Float) (Vertex3 Float)
-bezier = Lift bezier'
+bezier = lift bezier'
 
 -- in order to use beziers and other lifted functions we need to be able to
 -- sequence inputs.  We desire in [Left a, Left b, Left c, Right d, ...]
@@ -56,9 +60,6 @@ bezier = Lift bezier'
 
 seqArr :: [a] -> MSP [a] [a]
 seqArr e = Arr (\a -> a ++ e)
-
-toRight a = Right a
-toLeft a = Left a
 
 aThenb :: [a] -> [b] -> MSP c (Either a b)
 aThenb a b = In [map toLeft a] >>> seqArr (map toRight b) >>> Unbatch id
