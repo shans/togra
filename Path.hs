@@ -37,9 +37,8 @@ bezierF basis s = bezier' basis 0 s
     prodxy 0 y = prodxy 1 y
     prodxy x y = product[x..y]
 
-bezierPatchF :: [Vertex3 Float] -> [Vertex3 Float] -> Float -> Float -> 
-		Vertex3 Float
-bezierPatchF a b c d = Vertex3 1.0 1.0 1.0  
+bezierPatchF :: [[Vertex3 Float]] -> Float -> Float -> Vertex3 Float
+bezierPatchF arr v1 v2 = bezierF (map (\a -> bezierF a v1) arr) v2
 
 bezier' :: [Vertex3 Float] -> MSP Float (Vertex3 Float)
 bezier' basis = Arr (bezierF basis)
@@ -68,7 +67,18 @@ bezier = liftF bezierF
 seqArr :: [a] -> MSP [a] [a]
 seqArr e = Arr (\a -> a ++ e)
 
+interArr :: [a] -> [a] -> MSP [a] [a]
+interArr a b = Arr (\p -> p ++ interleave a b)
+  where
+    interleave [] _ = []
+    interleave (h:t) b = (h:b) ++ interleave t b
+
 aThenb :: [a] -> [b] -> MSP c (Either a b)
 aThenb a b = In [map toLeft a] >>> seqArr (map toRight b) >>> Unbatch
 
-bezierPatch = left (left (liftF bezierPatchF) >>> FApp) >>> FApp
+aThenbThenc :: [a] -> [b] -> [c] -> MSP d (Either (Either a b) c)
+aThenbThenc a b c = In [map toLeft (map toLeft a)] >>> 
+    interArr (map toLeft (map toRight b)) (map toRight c) >>> Unbatch
+
+bezierPatch = left (liftF bezierPatchF) >>> FApp
+

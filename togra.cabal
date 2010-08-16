@@ -38,3 +38,7 @@ Executable Bezier
 Executable Bezier2
   Main-is:		examples/Bezier2.hs
   Extensions:		GADTs
+
+Executable BezierPatch
+  Main-is:		examples/BezierPatch.hs
+  Extensions:		GADTs
