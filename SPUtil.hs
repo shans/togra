@@ -56,11 +56,20 @@ pairwise :: Monad m => (a -> a -> b) -> SP m a b
 pairwise f = Get (\a1 -> pairwise' f a1)
 pairwise' f a1 = Get (\a2 -> Put (f a1 a2) (pairwise' f a2))
 
-toQuads :: [a] -> [a] -> [a]
-toQuads l1 l2 = concat (zipWith toQuad ll1 ll2)
+toQuadLoop :: [a] -> [a] -> [a]
+toQuadLoop l1 l2 = concat (zipWith toQuad ll1 ll2)
   where
     ll1 = zip l1 ((tail l1) ++ [head l1])
     ll2 = zip l2 ((tail l2) ++ [head l2])
+    toQuad (a,b) (c,d) = [a,b,d,c]
+
+-- This relies on zip ignoring the end value in l1 and l2 because the
+-- second list is shorter
+toQuads :: [a] -> [a] -> [a]
+toQuads l1 l2 = concat (zipWith toQuad ll1 ll2)
+  where
+    ll1 = zip l1 (tail l1)
+    ll2 = zip l2 (tail l2)
     toQuad (a,b) (c,d) = [a,b,d,c]
 
 pairwiseL :: (a -> a -> b) -> [a] -> [b]
@@ -68,7 +77,7 @@ pairwiseL f [a] = []
 pairwiseL f (a:b:l) = (f a b):(pairwiseL f (b:l))
 
 sphere :: (Monad m) => Int -> Int -> SP m i [Vertex3 Float]
-sphere slices segments = ((sphereLineGen slices &&& sphereSliceSizeGen slices) &&& (circleGen segments >>> batch segments)) >>> scaleExtrude >>> (pairwise toQuads) >>> batch (slices - 1) >>> concatA
+sphere slices segments = ((sphereLineGen slices &&& sphereSliceSizeGen slices) &&& (circleGen segments >>> batch segments)) >>> scaleExtrude >>> (pairwise toQuadLoop) >>> batch (slices - 1) >>> concatA
 
 liftSP :: Monad m => (a -> SP m b c) -> SP m (Either a b) c
 liftSP f = lift' onlyGet where

@@ -129,7 +129,7 @@ sphereMA' :: Int -> Int -> MSP i [Vertex3 Float]
 sphereMA' slices segments = 
   ((sphereLineGenMA' slices &&& sphereSliceSizeGenMA' slices) &&&
     (circleGenMA' segments >>> ESP (batch segments))) >>> scaleExtrudeMA >>>
-      ESP (pairwise toQuads) >>> ESP (batch (slices - 1)) >>> concatMA
+      ESP (pairwise toQuadLoop) >>> ESP (batch (slices - 1)) >>> concatMA
 
 -- extra parens needed because >>> associates RTL.  This means we have
 -- In >>> Arr >>> Batch >>> Arr, but we need to collapse In >>> Arr first,
@@ -142,5 +142,5 @@ sphereMA :: Int -> Int -> MSP i [Vertex3 Float]
 sphereMA slices segments = 
   ((sphereLineGenMA slices &&& sphereSliceSizeGenMA slices) &&&
     (circleGenMA segments >>> Batch segments)) >>> scaleExtrudeMA >>> 
-      Batch slices >>> Arr (pairwiseL toQuads) >>> concatMA
+      Batch slices >>> Arr (pairwiseL toQuadLoop) >>> concatMA
 

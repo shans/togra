@@ -26,6 +26,9 @@ v3t f (Vertex3 a b c) = Vertex3 (f a) (f b) (f c)
 (+!+) :: Vertex3 Float -> Vertex3 Float -> Vertex3 Float
 (Vertex3 a b c) +!+ (Vertex3 d e f) = Vertex3 (a+d) (b+e) (c+f)
 
+binom x y = div (prodxy (y-x+1) y) (prodxy 1 x)
+prodxy x y = product[x..y]
+
 bezierF :: [Vertex3 Float] -> Float -> Vertex3 Float
 bezierF basis s = bezier' basis 0 s
   where
@@ -33,9 +36,6 @@ bezierF basis s = bezier' basis 0 s
     bezier' [] _ _ = Vertex3 0.0 0.0 0.0
     bezier' (h:r) j t = (v3t (\a -> a * (t^j) * ((1-t)^(size-j-1)) * 
 	     fromIntegral (binom j (size-1))) h) +!+ bezier' r (j+1) t
-    binom y x = div (prodxy y (x-1)) (prodxy 1 (x-y-1))
-    prodxy 0 y = prodxy 1 y
-    prodxy x y = product[x..y]
 
 bezierPatchF :: [[Vertex3 Float]] -> Float -> Float -> Vertex3 Float
 bezierPatchF arr v1 v2 = bezierF (map (\a -> bezierF a v1) arr) v2
