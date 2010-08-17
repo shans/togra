@@ -19,7 +19,9 @@ theArr = ((aThenbThenc [[
 		  [fromIntegral x / fromIntegral (divs-1) | x <- [0..(divs-1)]]
 		  [fromIntegral x / fromIntegral (divs-1) | x <- [0..(divs-1)]])
      >>> bezierPatch >>> Batch divs >>> Batch divs >>> Arr (pairwiseL toQuads) 
-     >>> concatMA >>> Arr (\a -> (a,a)))
+     >>> concatMA >>> Arr (\a -> (a,a))) 
+     >>> second (Unbatch >>> Batch 4 >>> quadNormal >>> repl 4 >>> Unbatch
+			 >>> Batch ((divs - 1)*(divs - 1)*4))
 
 main = do
 	putStrLn (show theArr)

@@ -26,6 +26,14 @@ v3t f (Vertex3 a b c) = Vertex3 (f a) (f b) (f c)
 (+!+) :: Vertex3 Float -> Vertex3 Float -> Vertex3 Float
 (Vertex3 a b c) +!+ (Vertex3 d e f) = Vertex3 (a+d) (b+e) (c+f)
 
+(Vertex3 a b c) -!- (Vertex3 d e f) = Vertex3 (a-d) (b-e) (c-f)
+
+(Vertex3 a b c) -*- (Vertex3 d e f) = Vertex3 (b*f-c*e) (c*d-a*f) (a*e-b*d)
+
+norm (Vertex3 a b c) = Vertex3 (a/n) (b/n) (c/n)
+  where
+    n = sqrt (a*a + b*b + c*c)
+
 binom x y = div (prodxy (y-x+1) y) (prodxy 1 x)
 prodxy x y = product[x..y]
 
@@ -82,3 +90,9 @@ aThenbThenc a b c = In [map toLeft (map toLeft a)] >>>
 
 bezierPatch = left (liftF bezierPatchF) >>> FApp
 
+quadNormalF :: [Vertex3 Float] -> Vertex3 Float
+quadNormalF (a:b:c:d:[]) = norm $ (a -!- c) -*- (b -!- d)
+
+quadNormal = Arr quadNormalF
+
+repl n = Arr (replicate n)
