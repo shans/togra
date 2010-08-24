@@ -15,6 +15,11 @@ Library
   Exposed-Modules:	SP, SPUtil, Vbo, Vao, Shader, TograStream, MSP, Togra,
                         Path
 
+Executable Examples
+  Build-Depends:        ui-command, data-default, monads-fd
+  Main-is:              examples/Examples.hs
+  Extensions:           GADTs
+
 Executable Sphere
   Main-is:		examples/Sphere.hs
   Extensions:           GADTs
