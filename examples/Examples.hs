@@ -7,10 +7,13 @@ import Control.Monad.Trans
 import MSP
 import SP
 import Path
+import Time
 import Timing
 import Togra
 import SPUtil
 import Graphics.Rendering.OpenGL
+import RenderTree
+import Transform
 
 main = appMain examples
 
@@ -22,8 +25,8 @@ examples = def {
   appAuthors = ["Shane Stephens"],
   appShortDesc = "Togra examples",
   appProject = "Togra",
-  appCmds = [sphereCmd, sphere2, sphere3, lineCmd, bezierCmd, bezier2,
-	     bezierPatchCmd]
+  appCmds = [sphereCmd, sphere2, sphere3, sphere4, spheres, lineCmd, 
+	     bezierCmd, bezier2, bezierPatchCmd]
 }
 
 command name desc handler = defCmd {
@@ -50,6 +53,20 @@ sphere3 = command "sphere3" "Renders an optimised MSP sphere" (liftIO $
     togra 640 480 (tograMInT 5
       (sphereMA 100 100 >>> Arr (\a -> (a,a))) 
       Quads))
+
+sphere4 = command "sphere4" "Renders a RenderTree sphere" (liftIO $
+  do
+    togra 640 480 (rtIn (Transform (In [translateM 0.0 3.0 (-1.0)]) $ Geom Quads (sphereMA 100 100 >>> Arr (\a -> (a,a))))))
+
+spheres = command "spheres" "Renders some spheres" (liftIO $
+  do
+    let sphere = Geom Quads $ sphereMA 100 100 >>> Arr (\a -> (a,a))
+    let t x y z rt = Transform (In [translateM x y z]) rt
+    let rt = Collection [t x y z sphere | x <- [-4,4], y <- [-4,4], z <- [-4,4]]
+    let spinMSP = ESP time >>> ESP timeCounter >>> 
+		  Arr (\a -> fromInteger a / 1000) >>> Arr (rotateM 0 1 0)
+    let spin rt = Transform spinMSP rt 
+    togra 640 480 $ rtIn $ t 0 0 (-8.0) $ spin rt)
 
 lineCmd = command "line" "Renders a line" (liftIO $
   togra 640 480 (tograMInT 5
@@ -96,3 +113,4 @@ bezierPatchCmd = command "bezierPatch" "Renders a bezier patch" (liftIO $
       >>> concatMA >>> Arr (\a -> (a,a))) 
       >>> second (Unbatch >>> Batch 4 >>> quadNormal >>> repl 4 >>> Unbatch
 			  >>> Batch ((divs - 1)*(divs - 1)*4))
+

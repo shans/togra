@@ -10,40 +10,13 @@ Cabal-Version:   	>=1.2
 
 Library
   Build-Depends:	base >= 4.0, OpenGL, StateVar, ObjectName, datetime, 
-                        GLUT
+                        GLUT, OpenGLRaw
   Extensions:		GADTs
   Exposed-Modules:	SP, SPUtil, Vbo, Vao, Shader, TograStream, MSP, Togra,
-                        Path
+                        Path, Time
 
 Executable Examples
   Build-Depends:        ui-command, data-default, monads-fd
   Main-is:              examples/Examples.hs
   Extensions:           GADTs
 
-Executable Sphere
-  Main-is:		examples/Sphere.hs
-  Extensions:           GADTs
-
-Executable Sphere2
-  Main-is:		examples/Sphere2.hs
-  Extensions:           GADTs
-
-Executable Sphere3
-  Main-is:		examples/Sphere3.hs
-  Extensions:           GADTs
-
-Executable Line
-  Main-is:		examples/Line.hs
-  Extensions:        	GADTs
-
-Executable Bezier
-  Main-is:		examples/Bezier.hs
-  Extensions:		GADTs
-
-Executable Bezier2
-  Main-is:		examples/Bezier2.hs
-  Extensions:		GADTs
-
-Executable BezierPatch
-  Main-is:		examples/BezierPatch.hs
-  Extensions:		GADTs

@@ -7,12 +7,24 @@ import Graphics.UI.GLUT
 import Shader
 import SimpleShader
 import SP
+import Transform
 import TograUtil
 import Vbo
+import Graphics.Rendering.OpenGL.Raw.ARB.Compatibility 
+    (glPushMatrix, glPopMatrix)
 
 data TograInput = DataStream ShaderTag DVBO
 		| RenderPrimitive PrimitiveMode
+		| TransformUpdate TograMatrix
+		| Untransform
 		| End 
+
+instance Show TograInput where
+  show (DataStream tag vbo) = "DataStream ..."
+  show (RenderPrimitive mode) = "RenderPrimitive " ++ show mode
+  show (TransformUpdate matrix) = "TransformUpdate " ++ show matrix
+  show Untransform = "Untransform"
+  show End = "End"
 
 togra :: GLsizei -> GLsizei -> ([ShaderTag] -> SP IO () TograInput) -> IO ()
 togra w h stream = do 
@@ -79,6 +91,14 @@ act program size streamRef = do
 	sizeVal <- get size
 	drawArrays mode 0 (fromIntegral sizeVal)
 	return False
+      act' (TransformUpdate mm) = do
+	m <- toGLMatrix mm
+	glPushMatrix
+	multMatrix m
+	return False
+      act' (Untransform) = do
+	glPopMatrix
+	return False
       act' End = do
 	return True
 
@@ -105,8 +125,8 @@ setShaderDefaults program = do
   setUniform program "Lights[0].diffuse" (vertex4 1.0 1.0 1.0 1.0)
   setUniform program "Lights[0].ambient" (vertex4 0.2 0.2 0.2 1.0)
   setUniform program "Lights[0].specular" (vertex4 0.3 1.0 0.3 1.0)
-  setUniform program "GlobalAmbient" (vertex4 0.3 0.05 0.05 0.1)
+  setUniform program "GlobalAmbient" (vertex4 0.3 0.05 0.05 1.0)
   setUniform program "Material.diffuse" (vertex4 0.5 0.5 0.5 1.0)
-  setUniform program "Material.ambient" (vertex4 0.2 0.2 0.2 1.0)
+  setUniform program "Material.ambient" (vertex4 0.5 0.2 0.2 1.0)
   --setUniform program "Material.shininess" (10.0 :: GLfloat)
   setUniform program "Material.specular" (vertex4 1.0 1.0 1.0 1.0)
