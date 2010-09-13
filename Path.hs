@@ -10,13 +10,16 @@ class Interpolatable a where
   interp :: Float -> a -> a -> a
 
 instance Interpolatable Float where
-  interp f a b = a*f + b*(1-f)
+  interp f a b = a*(1-f) + b*f
 
 instance Interpolatable a => Interpolatable (Vertex3 a) where
   interp f (Vertex3 sx sy sz) (Vertex3 ex ey ez) =
     Vertex3 (interp f sx ex) (interp f sy ey) (interp f sz ez)
 
-interpolate :: (Interpolatable b) => Int -> b -> b -> MSP Int b 
+instance Interpolatable a => Interpolatable [a] where
+  interp f la lb = zipWith (interp f) la lb
+
+interpolate :: (Integral a, Interpolatable b) => Int -> b -> b -> MSP a b 
 interpolate size start end = Arr (\a -> interp (fromIntegral a / fromIntegral size) start end)
 
 line :: Int -> Vertex3 Float -> Vertex3 Float -> MSP a (Vertex3 Float)
@@ -164,3 +167,9 @@ bezierPatchA ctlPts ctlPtsLen xs xlen ys ylen =
   appLTR (appLTR xs ctlPts ctlPtsLen (\a -> (\b -> bezierF b a)) >>> 
     Batch ctlPtsLen) ys ylen bezierF >>> Batch ylen >>> Batch xlen >>> 
       Arr (pairwiseL toQuads) >>> concatMA
+
+{-
+
+And now we should be able to animate those ctlPts, right?
+
+-}

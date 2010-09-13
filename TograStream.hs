@@ -57,8 +57,8 @@ assocShaders :: (Show a, GlTypable a, Show b, GlTypable b) =>
     [ShaderTag] -> PrimitiveMode -> SP IO ([a],[b]) TograInput
 assocShaders activeTags mode = Get (\(a, b) -> Block (
       do
-	ti1 <- makeDataStreamInput tag1 ArrayBuffer StaticDraw a
-	ti2 <- makeDataStreamInput tag2 ArrayBuffer StaticDraw b
+	ti1 <- makeDataStreamInput tag1 ArrayBuffer DynamicDraw a
+	ti2 <- makeDataStreamInput tag2 ArrayBuffer DynamicDraw b
 	return $ putL [ti1, ti2, RenderPrimitive mode, End] 
 		  (freeData ti1 ti2))) where
   -- how can we make this dynamic?

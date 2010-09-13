@@ -26,7 +26,8 @@ examples = def {
   appShortDesc = "Togra examples",
   appProject = "Togra",
   appCmds = [sphereCmd, sphere2, sphere3, sphere4, spheres, lineCmd, 
-	     bezierCmd, bezier2, bezier3, bezierPatchCmd, bezierPatch2]
+	     bezierCmd, bezier2, bezier3, bezierPatchCmd, bezierPatch2,
+             aniBez]
 }
 
 command name desc handler = defCmd {
@@ -144,4 +145,29 @@ bezierPatch2 = command "bezierPatch2"
       divVals = [fromIntegral x / fromIntegral (divs-1) | x <- [0..(divs-1)]]
       divs = 80 
 	  
+sinA ampl per = Arr (\a -> round $ ampl * sin (fromIntegral a / per))
+
+aniBez = command "aniBez"
+  "Renders an animated bezier patch" (liftIO $
+    do
+      putStrLn (show theArr)
+      togra 640 480 (tograMInT 5 theArr Quads))
+    where
+      theArr = bezierPatchA 
+	  (ESP time >>> ESP timeCounter >>> sinA 500 1000 >>> Arr (+ 500) >>>
+           interpolate 1000 
+              [[v (-2) (-2) 0, v (-1) (-1) 2, v 1 (-2) (-3), v 3 (-2) 0],
+	       [v (-2) 0 (-3), v (-1) 0 2, v 1 0 (-2), v 2 0 1],
+	       [v (-2) 0 3, v (-1) 0 2, v 1 0 (-2), v 2 0 1],
+	       [v (-2) 2 0, v (-1) 2 (-1), v 1 2 (-1), v 2 2 0]]
+              [[v (-4) (-4) 0, v (-1) (-2) 3, v 1 (-2) (-3), v 2 (-2) 0],
+	       [v (-2) 0 (-3), v (-1) 0 2, v (-8) 0 (-2), v 2 0 1],
+	       [v (-2) 0 3, v (-1) 0 2, v 1 0 (-2), v 2 0 1],
+	       [v (-2) 1 0, v (-1) 2 (-1), v 1 2 (-1), v 2 4 0]] >>> repl divs 
+		>>> Unbatch >>> Unbatch) 4
+	  (In divVals) divs (In divVals) divs >>> Arr (\a -> (a,a))
+	  >>> second (Unbatch >>> Batch 4 >>> quadNormal >>> repl 4 >>> Unbatch
+	  >>> Batch ((divs - 1) * (divs - 1) * 4))
+      divVals = [fromIntegral x / fromIntegral (divs-1) | x <- [0..(divs-1)]]
+      divs = 20 
 

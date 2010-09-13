@@ -90,6 +90,7 @@ act program size streamRef = do
       act' (RenderPrimitive mode) = do
 	sizeVal <- get size
 	drawArrays mode 0 (fromIntegral sizeVal)
+        resetVarying program
 	return False
       act' (TransformUpdate mm) = do
 	m <- toGLMatrix mm

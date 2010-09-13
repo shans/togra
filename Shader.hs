@@ -1,5 +1,6 @@
 module Shader (prepareShaders, setUniform, setVarying, bind, unbind,
-               ShaderTag(Tag), getTagType, shaderTags, TograShader) where
+               ShaderTag(Tag), getTagType, shaderTags, TograShader,
+               resetVarying) where
 
 import Data.ObjectName
 import Data.StateVar
@@ -77,6 +78,10 @@ setVarying (TograShader program vao) name dvbo = do
   current <- get currentProgram
   if current == Just program then bind vao else return ()
   checkGlErrors
+
+resetVarying :: TograShader -> IO ()
+resetVarying (TograShader program vao) = do
+  vao $= emptyVAO
 
 data ShaderTag = Tag GLint VariableType String
 
