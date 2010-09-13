@@ -10,7 +10,7 @@ import Graphics.Rendering.OpenGL
 
 data RenderTree where
   Collection :: [RenderTree] -> RenderTree
-  Geom :: PrimitiveMode -> MSP a ([Vertex3 Float], [Vertex3 Float]) 
+  Geom :: PrimitiveMode -> MSP () ([Vertex3 Float], [Vertex3 Float]) 
 			-> RenderTree
   Transform :: MSP () TograMatrix -> RenderTree -> RenderTree
 
@@ -30,6 +30,7 @@ instance Show ActionList where
   show (Stream s) = "Stream ..."
 
 rt2tt (Geom mode (In [(v,n)])) = [AssocOnce mode v n]
+rt2tt (Geom mode msp) = [Assoc mode $ eval msp]
 rt2tt (Transform t rt) = (Trans (eval t)):(rt2tt rt) ++ [UnTrans]
 rt2tt (Collection l) = concat $ map rt2tt l
 

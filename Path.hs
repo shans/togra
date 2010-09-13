@@ -3,6 +3,7 @@ module Path where
 import Graphics.Rendering.OpenGL
 import VertexUtil
 import SP
+import SPUtil
 import MSP
 
 class Interpolatable a where
@@ -87,7 +88,7 @@ aThenbThenc a b c = In [map toLeft (map toLeft a)] >>>
 bezierPatch = left (liftF bezierPatchF) >>> FApp
 
 quadNormalF :: [Vertex3 Float] -> Vertex3 Float
-quadNormalF (a:b:c:d:[]) = norm $ (a -!- c) -*- (b -!- d)
+quadNormalF (a:b:c:d:[]) = norm $ (c -!- a) -*- (b -!- d)
 
 quadNormal = Arr quadNormalF
 
@@ -149,3 +150,17 @@ stripe = Arr (\(a,bl) -> (Left a):(map toRight bl)) >>> Unbatch
 
 appLTR :: MSP () a -> MSP () b -> Int -> (a -> b -> c) -> MSP () c
 appLTR la ra bs f = (la &&& (ra >>> Batch bs)) >>> stripe >>> liftF f 
+
+{-
+
+So we start with a matrix (say 4x4) of points.  We need to generate a bezier
+value at xs for each one.  Then we need to bundle that up into an array of
+4 points, and stripe it to get a bezier curve.  We need to do this for
+each xs. Woah - is this appRTL?
+
+-}
+
+bezierPatchA ctlPts ctlPtsLen xs xlen ys ylen = 
+  appLTR (appLTR xs ctlPts ctlPtsLen (\a -> (\b -> bezierF b a)) >>> 
+    Batch ctlPtsLen) ys ylen bezierF >>> Batch ylen >>> Batch xlen >>> 
+      Arr (pairwiseL toQuads) >>> concatMA

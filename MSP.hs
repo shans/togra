@@ -25,7 +25,7 @@ data MSP a b where
 instance Show (MSP a b) where
   show (In v) = "|->"
   show (Arr f) = "->"
-  show (First f) = "-l->"
+  show (First f) = "-(!F" ++ (show f) ++ "F!)->"
   show (Dot b a) =  "(" ++ (show a) ++ " >>> " ++ (show b) ++ ")"
   show (ESP a) = "-!->"
   show (Par a b) = "(" ++ show a ++ " &&& " ++ show b ++ ")"
@@ -56,6 +56,10 @@ instance Category MSP where
   id = Arr id
   -- these are our rewrite rules.  These make MSPs more efficient by
   -- precalculating data arrays where possible.
+  -- In [(a,b)] >>> First g = In [(a,b)] >>> (g *** id) 
+  --     = (In [a] >>> g) *** In [b]
+  c . (Par (In a) (In b)) = c . In (zip a b)
+  (First g) . (In v) = Par (g . In (map fst v)) (In (map snd v))
   (Arr g) . (Arr f) = Arr (g . f)
   (Arr f) . (In vl) = In (map f vl)
   (Batch n) . (In vl) = In (modBatch n vl)
@@ -93,6 +97,7 @@ eval (Arr f) = arr f
 eval (Dot b a) = (eval a) >>> (eval b)
 eval (First a) = first (eval a)
 eval (ESP a) = a
+eval (Par (In v1) (In v2)) = eval $ In (modAnd v1 v2)
 eval (Par a b) = (eval a) &&& (eval b)
 eval (Batch n) = batch n
 eval (Unbatch) = unbatch

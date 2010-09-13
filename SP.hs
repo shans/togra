@@ -56,7 +56,14 @@ instance Monad m => Arrow (SP m) where
       bypass q (Put c sp)  = case pop q of
                                 Just (c', q') -> Put (c,c') (bypass q' sp)
                                 Nothing       -> Get (\(_,d) -> Put (c,d) (bypass q sp))
-  (&&&) (Put o1 sp1) (Put o2 sp2) = Put (o1, o2) (sp1 &&& sp2)
+  (Put o1 sp1) &&& (Put o2 sp2) = Put (o1, o2) (sp1 &&& sp2)
+  (Block msp1) &&& sp2 = Block (do
+    sp1 <- msp1
+    return $ sp1 &&& sp2)
+  sp1 &&& (Block msp2) = Block (do
+    sp2 <- msp2
+    return $ sp1 &&& sp2)
+  f &&& g = arr (\b -> (b,b)) >>> f *** g
 
 -- ArrowZero just waits in a state getting input forever.
 

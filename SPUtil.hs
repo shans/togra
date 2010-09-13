@@ -25,7 +25,7 @@ circleGen n = 0 ..& (n-1) >>> arr (partOfAng (2 * pi) n) >>>
 batch :: (Monad m) => Int-> SP m a [a]
 batch n = batch' n [] (batch n)
 batch' 0 l r = Put l r
-batch' n l r = Get (\a -> batch' (n - 1) (a:l) r)
+batch' n l r = Get (\a -> batch' (n - 1) (l ++ [a]) r)
 
 unbatch :: (Monad m) => SP m [a] a
 unbatch = Get (\a -> unbatch' a)
@@ -109,6 +109,11 @@ liftSP f = lift' onlyGet where
   lift'' sp (Left a) = lift' (f a)
   lift'' (Get fsp) (Right b) = lift' (fsp b)
   onlyGet = Get (\_ -> onlyGet)
+
+printTaggedSP :: Show a => String -> SP IO a a
+printTaggedSP s = Get (\a -> Block(do
+  putStrLn $ s ++ ": " ++ (show a)
+  return (Put a $ printTaggedSP s)))
 
 printSP :: Show a => SP IO a a
 printSP = Get (\a -> Block(do
