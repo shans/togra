@@ -1,6 +1,7 @@
 module SPUtil where
 
 import Graphics.Rendering.OpenGL
+import VertexUtil
 import SP
 
 -- TODO: Split into base utilities / geometry utilities / shapes
@@ -17,12 +18,9 @@ partOfAng ang n x = fromIntegral x * ang / fromIntegral n
 (..&) :: (Monad m) => Int -> Int -> SP m a Int
 s ..& e = rPutL [s..e]
 
-vertex3Fun :: (Monad m) => (a -> b) -> (a -> b) -> (a -> b) -> SP m a (Vertex3 b)
-vertex3Fun a b c = arr (\v -> Vertex3 (a v) (b v) (c v))
-
 circleGen :: (Monad m, Floating b) => Int -> SP m a (Vertex3 b)
 circleGen n = 0 ..& (n-1) >>> arr (partOfAng (2 * pi) n) >>> 
-	      vertex3Fun cos sin (\a -> 0)
+	      v3Fun cos sin (\a -> 0)
 
 batch :: (Monad m) => Int-> SP m a [a]
 batch n = batch' n [] (batch n)
@@ -39,18 +37,29 @@ concatA = arr concat
 
 sphereLineGen :: (Monad m, Floating b) => Int -> SP m a (Vertex3 b)
 sphereLineGen n = 0 ..& (n - 1) >>> arr (partOfAng pi (n - 1)) >>>
-	          vertex3Fun (\a -> 0) (\a -> 0) cos
+	          v3Fun (\a -> 0) (\a -> 0) cos
 
 sphereSliceSizeGen :: (Monad m, Floating b) => Int -> SP m a b
 sphereSliceSizeGen n = 0 ..& (n - 1) >>> arr (partOfAng pi (n - 1)) >>> arr sin
 
+scaleF (shape, scale) = map (\a -> scale -.- a) shape
+scaleA :: Monad m => SP m ([Vertex3 Float], Float) [Vertex3 Float]
+scaleA = arr scaleF
+
+
+translateF (shape, loc) = map (loc +!+) shape
+translateA :: Monad m => SP m ([Vertex3 Float], Vertex3 Float) [Vertex3 Float]
+translateA = arr translateF
+
 -- TODO: recast in terms of vertex algebra
 -- TODO rename these as "SP" versions (or Prim or something)
-scaleExtrude :: (Monad m, Floating a) 
-    => SP m ((Vertex3 a, a), [Vertex3 a]) [Vertex3 a]
-scaleExtrude = arr (\((Vertex3 px py pz, scale), shape) ->
-      map (\(Vertex3 x y z) -> Vertex3 (px+scale*x) (py+scale*y) (pz+scale*z))
-	  shape)
+scaleExtrude :: Monad m 
+    => SP m ((Vertex3 Float, Float), [Vertex3 Float]) [Vertex3 Float]
+--scaleExtrude = arr (\((Vertex3 px py pz, scale), shape) ->
+--      map (\(Vertex3 x y z) -> Vertex3 (px+scale*x) (py+scale*y) (pz+scale*z))
+--	  shape)
+
+scaleExtrude = arr (\((a,b),c) -> ((c,b),a)) >>> first scaleA >>> translateA
 
 pairwise :: Monad m => (a -> a -> b) -> SP m a b
 pairwise f = Get (\a1 -> pairwise' f a1)
@@ -77,7 +86,21 @@ pairwiseL f [a] = []
 pairwiseL f (a:b:l) = (f a b):(pairwiseL f (b:l))
 
 sphere :: (Monad m) => Int -> Int -> SP m i [Vertex3 Float]
-sphere slices segments = ((sphereLineGen slices &&& sphereSliceSizeGen slices) &&& (circleGen segments >>> batch segments)) >>> scaleExtrude >>> (pairwise toQuadLoop) >>> batch (slices - 1) >>> concatA
+--sphere slices segments = ((sphereLineGen slices &&& sphereSliceSizeGen slices) &&& (circleGen segments >>> batch segments)) >>> scaleExtrude >>> (pairwise toQuadLoop) >>> batch (slices - 1) >>> concatA
+
+sphere slices segments = 
+  (
+    (
+      (
+	(circleGen segments >>> batch segments)
+	 &&&
+	sphereSliceSizeGen slices
+      ) >>> scaleA
+    )
+     &&&
+    sphereLineGen slices
+  ) >>> translateA >>> (pairwise toQuadLoop) >>> batch (slices - 1) >>> concatA
+  
 
 liftSP :: Monad m => (a -> SP m b c) -> SP m (Either a b) c
 liftSP f = lift' onlyGet where

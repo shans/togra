@@ -26,7 +26,7 @@ examples = def {
   appShortDesc = "Togra examples",
   appProject = "Togra",
   appCmds = [sphereCmd, sphere2, sphere3, sphere4, spheres, lineCmd, 
-	     bezierCmd, bezier2, bezierPatchCmd]
+	     bezierCmd, bezier2, bezier3, bezierPatchCmd]
 }
 
 command name desc handler = defCmd {
@@ -92,6 +92,18 @@ bezier2 = command "bezier2"
 		   Vertex3 2 0 0, Vertex3 (-1) 1 1]]
 		  [fromIntegral x / fromIntegral 20 | x <- [0..19]]) >>>
 	  bezier >>> Batch 20 >>> Arr (\a -> (a,a)))
+
+bezier3 = command "bezier3"
+  "Renders a bezier using generalized bezier function and appLTR" (liftIO $
+    do
+      putStrLn (show theArr)
+      togra 640 480 (tograMInT 5 theArr LineStrip))
+    where
+      theArr = appLTR 
+	(In [[Vertex3 0 0 0, Vertex3 0 2 2, Vertex3 2 0 0, Vertex3 (-1) 1 1]])
+	(In [fromIntegral x / fromIntegral 20 | x <- [0..19]])
+	20 bezierF >>> Batch 20 >>> Arr (\a -> (a,a))
+		  
 
 bezierPatchCmd = command "bezierPatch" "Renders a bezier patch" (liftIO $
   do

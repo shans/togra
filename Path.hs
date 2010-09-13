@@ -1,6 +1,7 @@
 module Path where
 
 import Graphics.Rendering.OpenGL
+import VertexUtil
 import SP
 import MSP
 
@@ -20,29 +21,16 @@ interpolate size start end = Arr (\a -> interp (fromIntegral a / fromIntegral si
 line :: Int -> Vertex3 Float -> Vertex3 Float -> MSP a (Vertex3 Float)
 line pieces start end = In [0..(pieces-1)] >>> interpolate (pieces-1) start end
 
-v3t :: (a -> b) -> Vertex3 a -> Vertex3 b
-v3t f (Vertex3 a b c) = Vertex3 (f a) (f b) (f c)
-
-(+!+) :: Vertex3 Float -> Vertex3 Float -> Vertex3 Float
-(Vertex3 a b c) +!+ (Vertex3 d e f) = Vertex3 (a+d) (b+e) (c+f)
-
-(Vertex3 a b c) -!- (Vertex3 d e f) = Vertex3 (a-d) (b-e) (c-f)
-
-(Vertex3 a b c) -*- (Vertex3 d e f) = Vertex3 (b*f-c*e) (c*d-a*f) (a*e-b*d)
-
-norm (Vertex3 a b c) = Vertex3 (a/n) (b/n) (c/n)
-  where
-    n = sqrt (a*a + b*b + c*c)
-
 binom x y = div (prodxy (y-x+1) y) (prodxy 1 x)
 prodxy x y = product[x..y]
 
+-- TODO: use non-function version of v3SymFun?
 bezierF :: [Vertex3 Float] -> Float -> Vertex3 Float
 bezierF basis s = bezier' basis 0 s
   where
     size = length basis
     bezier' [] _ _ = Vertex3 0.0 0.0 0.0
-    bezier' (h:r) j t = (v3t (\a -> a * (t^j) * ((1-t)^(size-j-1)) * 
+    bezier' (h:r) j t = (v3SymFunF (\a -> a * (t^j) * ((1-t)^(size-j-1)) * 
 	     fromIntegral (binom j (size-1))) h) +!+ bezier' r (j+1) t
 
 bezierPatchF :: [[Vertex3 Float]] -> Float -> Float -> Vertex3 Float
@@ -81,9 +69,17 @@ interArr a b = Arr (\p -> p ++ interleave a b)
     interleave [] _ = []
     interleave (h:t) b = (h:b) ++ interleave t b
 
+-- Provide each a as Left a .., then each b as Right b, unbatched.
 aThenb :: [a] -> [b] -> MSP c (Either a b)
 aThenb a b = In [map toLeft a] >>> seqArr (map toRight b) >>> Unbatch
 
+-- Provide all of [a] as Left (Left a), then interleave each [b] 
+-- (as Left (Right b)) with all of [c] (as Right c) each time. i.e.:
+-- [a1,a2,a3] [b1,b2,b3] [c1,c2,c3] ->
+-- [LLa1, LLa2, LLa3, 
+--  LRb1, Rc1, Rc2, Rc3, 
+--  LRb2, Rc1, Rc2, Rc3,
+--  LRb3, Rc1, Rc2, Rc3]
 aThenbThenc :: [a] -> [b] -> [c] -> MSP d (Either (Either a b) c)
 aThenbThenc a b c = In [map toLeft (map toLeft a)] >>> 
     interArr (map toLeft (map toRight b)) (map toRight c) >>> Unbatch
@@ -96,3 +92,60 @@ quadNormalF (a:b:c:d:[]) = norm $ (a -!- c) -*- (b -!- d)
 quadNormal = Arr quadNormalF
 
 repl n = Arr (replicate n)
+
+{- 
+given a function, (a -> b -> c), what might we want to do with it?
+
+we might wish to require a pair (a,b) and generate a c - i.e.
+MSP (a,b) c
+
+we might also wish to accept Left a values and Right b values, partially 
+applying each (a) to generate (b -> c), and maintaining a "current" value.
+
+Arr (left f) >>> FApp does this.  Arr (left f) takes Left a, generating Left
+(b -> c), or Right d as a pass-through.  FApp takes Left (a -> b) or Right a,
+storing Left (a -> b) and applying it to each subsequent Right a.
+
+We can implement an MSP (a,b) c in terms of this:
+Arr \(a, b) -> [Left a, Right b] >>> Unbatch >>> Arr (left f) >>> FApp.
+
+We can also implement MSP (a,b) c directly:
+Arr (\a,b) -> f a b
+
+And we can implement MSP (Either a b) c in terms of MSP (a,b) c, although this
+is less optimal because of possible recalculation of the partially evaluated
+result.
+
+BezierPatch is interesting because we do this:
+
+[[Control Points]]     [0..1]
+              \         /
+               \       /
+             [Control Points]    [0..1]
+                      \            /
+                       \         /
+                     Resulting Point
+
+
+When we implement an MSP (Either a b) c, it's generally because we want to 
+provide an a, then run through a stream of b's to generate a stream of c's.
+
+This is also true at this higher level, but the control is sort of backwards - 
+we want to provide the [[CP]]s, then run through the values in [0..1], but 
+FOR EACH VALUE, we want to provide the result as a [CP] and run through the 
+values in [0..1] again.  So if we have an arrow that grabs an upstream, lefts
+it, then provides a sequence of local results, we should be OK for this
+use case.
+
+Of course there's a more general problem if we want to treat the [0..1]
+as streams too.
+
+We could also have an arrow that takes (a,[b]) pairs, pushing out Left a
+followed by each Right b?
+-} 
+
+stripe :: MSP (a,[b]) (Either a b)
+stripe = Arr (\(a,bl) -> (Left a):(map toRight bl)) >>> Unbatch
+
+appLTR :: MSP () a -> MSP () b -> Int -> (a -> b -> c) -> MSP () c
+appLTR la ra bs f = (la &&& (ra >>> Batch bs)) >>> stripe >>> liftF f 
