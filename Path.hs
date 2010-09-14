@@ -154,6 +154,17 @@ stripe = Arr (\(a,bl) -> (Left a):(map toRight bl)) >>> Unbatch
 appLTR :: MSP () a -> MSP () b -> Int -> (a -> b -> c) -> MSP () c
 appLTR la ra bs f = (la &&& (ra >>> Batch bs)) >>> stripe >>> liftF f 
 
+{- 
+another option is to provide a map operation on a function.
+-}
+
+map2nd :: (a -> b -> c) -> (a -> [b] -> [c])
+map2nd f a = map (f a)
+
+arr2 f = Arr (\(a,b) -> f a b)
+
+bezierA = arr2 $ map2nd bezierF
+
 {-
 
 So we start with a matrix (say 4x4) of points.  We need to generate a bezier
@@ -167,6 +178,14 @@ bezierPatchA ctlPts ctlPtsLen xs xlen ys ylen =
   appLTR (appLTR xs ctlPts ctlPtsLen (\a -> (\b -> bezierF b a)) >>> 
     Batch ctlPtsLen) ys ylen bezierF >>> Batch ylen >>> Batch xlen >>> 
       Arr (pairwiseL toQuads) >>> concatMA
+
+map1st :: (a -> b -> c) -> ([a] -> b -> [c])
+map1st f la b = map (\a -> f a b) la
+
+-- ((ctlPoints, xs), ys)
+bezierPatchA2 = first (arr2 (map2nd $ map1st bezierF)) 
+  >>> (arr2 (map1st $ map2nd bezierF)) 
+  >>> Arr (pairwiseL toQuads) >>> concatMA
 
 {-
 

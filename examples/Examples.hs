@@ -27,7 +27,7 @@ examples = def {
   appProject = "Togra",
   appCmds = [sphereCmd, sphere2, sphere3, sphere4, spheres, lineCmd, 
 	     bezierCmd, bezier2, bezier3, bezierPatchCmd, bezierPatch2,
-             aniBez]
+             bezierPatch3, aniBez]
 }
 
 command name desc handler = defCmd {
@@ -104,6 +104,11 @@ bezier3 = command "bezier3"
 	(In [[Vertex3 0 0 0, Vertex3 0 2 2, Vertex3 2 0 0, Vertex3 (-1) 1 1]])
 	(In [fromIntegral x / fromIntegral 20 | x <- [0..19]])
 	20 bezierF >>> Batch 20 >>> Arr (\a -> (a,a))
+
+bezierPatchNormals divs =  Arr (\a -> (a,a)) >>> second (
+  Unbatch >>> Batch 4 >>> quadNormal >>> repl 4 >>> 
+  Unbatch >>> Batch ((divs - 1)*(divs - 1)*4))
+
 		  
 bezierPatchCmd = command "bezierPatch" "Renders a bezier patch" (liftIO $
   do
@@ -122,11 +127,13 @@ bezierPatchCmd = command "bezierPatch" "Renders a bezier patch" (liftIO $
 		  [fromIntegral x / fromIntegral (divs-1) | x <- [0..(divs-1)]]
 		  [fromIntegral x / fromIntegral (divs-1) | x <- [0..(divs-1)]])
       >>> bezierPatch >>> Batch divs >>> Batch divs >>> Arr (pairwiseL toQuads) 
-      >>> concatMA >>> Arr (\a -> (a,a))) 
-      >>> second (Unbatch >>> Batch 4 >>> quadNormal >>> repl 4 >>> Unbatch
-			  >>> Batch ((divs - 1)*(divs - 1)*4))
-
+      >>> concatMA >>> bezierPatchNormals divs)
 v = Vertex3
+
+ctlPts = [[v (-2) (-2) 0, v (-1) (-2) 3, v 1 (-2) (-3), v 2 (-2) 0],
+	  [v (-2) 0 (-3), v (-1) 0 2, v 1 0 (-2), v 2 0 1],
+	  [v (-2) 0 3, v (-1) 0 2, v 1 0 (-2), v 2 0 1],
+	  [v (-2) 2 0, v (-1) 2 (-1), v 1 2 (-1), v 2 2 0]]
 
 bezierPatch2 = command "bezierPatch2"
   "Renders a bezier patch using appLTR" (liftIO $
@@ -134,14 +141,19 @@ bezierPatch2 = command "bezierPatch2"
       putStrLn (show theArr)
       togra 640 480 (rtIn (Geom Quads theArr)))
     where
-      theArr = bezierPatchA 
-	  (In [[v (-2) (-2) 0, v (-1) (-2) 3, v 1 (-2) (-3), v 2 (-2) 0],
-	       [v (-2) 0 (-3), v (-1) 0 2, v 1 0 (-2), v 2 0 1],
-	       [v (-2) 0 3, v (-1) 0 2, v 1 0 (-2), v 2 0 1],
-	       [v (-2) 2 0, v (-1) 2 (-1), v 1 2 (-1), v 2 2 0]]) 4
-	  (In divVals) divs (In divVals) divs >>> Arr (\a -> (a,a))
-	  >>> second (Unbatch >>> Batch 4 >>> quadNormal >>> repl 4 >>> Unbatch
-	  >>> Batch ((divs - 1) * (divs - 1) * 4))
+      theArr = bezierPatchA (In ctlPts) 4 (In divVals) divs (In divVals) divs 
+	>>> bezierPatchNormals divs
+      divVals = [fromIntegral x / fromIntegral (divs-1) | x <- [0..(divs-1)]]
+      divs = 80 
+
+bezierPatch3 = command "bezierPatch3"
+  "Renders a bezier patch using map1st and map2nd" (liftIO $
+    do
+      putStrLn (show theArr)
+      togra 640 480 (rtIn (Geom Quads theArr)))
+    where
+      theArr = ((In [ctlPts] &&& In [divVals]) &&& In [divVals]) 
+	>>> bezierPatchA2 >>> bezierPatchNormals divs
       divVals = [fromIntegral x / fromIntegral (divs-1) | x <- [0..(divs-1)]]
       divs = 80 
 	  
