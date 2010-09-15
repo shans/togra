@@ -106,15 +106,26 @@ taggedStreams ((Stream s):t) n = (taggedArrow s n) >>> taggedStreams t (n+1)
 taggedStreams ((PutP i):t) n
    = (taggedArrow (rPutL [[i]])) n >>> taggedStreams t (n+1)
 
+
+sequenceInputs :: [ActionList] -> SP IO () [TograInput]
+sequenceInputs [] = error "no inputs"
+sequenceInputs [a] = streamOf a
+sequenceInputs (a:b) = (streamOf a &&& sequenceInputs b) 
+			>>> arr (\(a,b) -> a ++ b)
+
+streamOf (PutP i) = rPutL [[i]]
+streamOf (Stream s) = s
+
 actionListIn :: IO [ActionList] -> SP IO () TograInput
 actionListIn mlist = Block (do
   list <- mlist
   putStrLn (show list)
-  return $ genVals (length list) >>> arr (\a -> Left a) >>> 
-	   taggedStreams list 1 >>>  
-	   left (consumeVals) >>> arr untagR >>> unbatch)
-    where
-      untagR (Right v) = v
+  return $ sequenceInputs list >>> unbatch)
+  --return $ genVals (length list) >>> arr (\a -> Left a) >>> 
+  --	   taggedStreams list 1 >>>  
+  --	   left (consumeVals) >>> arr untagR >>> unbatch)
+  --  where
+  --    untagR (Right v) = v
 
 rtIn tree tags = actionListIn (tograRenderTreeTaskListIn (rt2tt tree) tags)
 
