@@ -27,7 +27,7 @@ examples = def {
   appProject = "Togra",
   appCmds = [sphereCmd, sphere2, sphere3, sphere4, spheres, lineCmd, 
 	     bezierCmd, bezier2, bezier3, bezierPatchCmd, bezierPatch2,
-             bezierPatch3, aniBez]
+             bezierPatch3, aniBez, aniBez2]
 }
 
 command name desc handler = defCmd {
@@ -159,6 +159,16 @@ bezierPatch3 = command "bezierPatch3"
 	  
 sinA ampl per = Arr (\a -> round $ ampl * sin (fromIntegral a / per))
 
+startCtlPts =  [[v (-2) (-2) 0, v (-1) (-1) 2, v 1 (-2) (-3), v 3 (-2) 0],
+	       [v (-2) 0 (-3), v (-1) 0 2, v 1 0 (-2), v 2 0 1],
+	       [v (-2) 0 3, v (-1) 0 2, v 1 0 (-2), v 2 0 1],
+	       [v (-2) 2 0, v (-1) 2 (-1), v 1 2 (-1), v 2 2 0]]
+
+endCtlPts = [[v (-4) (-4) 0, v (-1) (-2) 3, v 1 (-2) (-3), v 2 (-2) 0],
+	       [v (-2) 0 (-3), v (-1) 0 2, v (-8) 0 (-2), v 2 0 1],
+	       [v (-2) 0 3, v (-1) 0 2, v 1 0 (-2), v 2 0 1],
+	       [v (-2) 1 0, v (-1) 2 (-1), v 1 2 (-1), v 2 4 0]] 
+
 aniBez = command "aniBez"
   "Renders an animated bezier patch" (liftIO $
     do
@@ -167,15 +177,7 @@ aniBez = command "aniBez"
     where
       theArr = bezierPatchA 
 	  (ESP time >>> ESP timeCounter >>> sinA 500 1000 >>> Arr (+ 500) >>>
-           interpolate 1000 
-              [[v (-2) (-2) 0, v (-1) (-1) 2, v 1 (-2) (-3), v 3 (-2) 0],
-	       [v (-2) 0 (-3), v (-1) 0 2, v 1 0 (-2), v 2 0 1],
-	       [v (-2) 0 3, v (-1) 0 2, v 1 0 (-2), v 2 0 1],
-	       [v (-2) 2 0, v (-1) 2 (-1), v 1 2 (-1), v 2 2 0]]
-              [[v (-4) (-4) 0, v (-1) (-2) 3, v 1 (-2) (-3), v 2 (-2) 0],
-	       [v (-2) 0 (-3), v (-1) 0 2, v (-8) 0 (-2), v 2 0 1],
-	       [v (-2) 0 3, v (-1) 0 2, v 1 0 (-2), v 2 0 1],
-	       [v (-2) 1 0, v (-1) 2 (-1), v 1 2 (-1), v 2 4 0]] >>> repl divs 
+           interpolate 1000 startCtlPts endCtlPts >>> repl divs 
 		>>> Unbatch >>> Unbatch) 4
 	  (In divVals) divs (In divVals) divs >>> Arr (\a -> (a,a))
 	  >>> second (Unbatch >>> Batch 4 >>> quadNormal >>> repl 4 >>> Unbatch
@@ -183,3 +185,18 @@ aniBez = command "aniBez"
       divVals = [fromIntegral x / fromIntegral (divs-1) | x <- [0..(divs-1)]]
       divs = 20 
 
+aniBez2 = command "aniBez2"
+  "Renders an animated bezier patch" (liftIO $
+    do
+      putStrLn (show theArr)
+      togra 640 480 (tograMInT 5 theArr Quads))
+    where
+      theArr = (
+		 (bp2 startCtlPts divVals &&& bp2 endCtlPts divVals) 
+		  &&& 
+                 (ESP (time >>> timeCounter) >>> sinA 500 1000 >>> Arr (+ 500))
+	       ) >>> Arr (\((a,b),c) -> interp (fromIntegral c / 1000) a b)
+		 >>> bezierPatchNormals divs
+      bp2 pts dvs = ((In [pts] &&& In [dvs]) &&& In [dvs]) >>> bezierPatchA2
+      divVals = [fromIntegral x / fromIntegral (divs-1) | x <- [0..(divs-1)]]
+      divs = 30
