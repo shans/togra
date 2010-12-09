@@ -1,0 +1,92 @@
+\documentclass[preprint]{sigplanconf}
+\usepackage{version}
+\usepackage[pdftex]{graphicx}
+\usepackage{amsmath}
+\usepackage{amsfonts,amssymb}
+\usepackage{style/utils}
+\usepackage{style/code}
+
+% -- Utils ----------------------------------------------------------------------------------------
+\newcommand{\TODO}[1]	{\emph{\textbf{TODO:} #1}}
+\newcommand{\CITE}	{\textbf{CITE} }
+\newcommand{\REF}	{\textbf{REF }}
+
+% -------------------------------------------------------------------------------------------------
+\begin{document}
+\preprintfooter{\textbf{--- DRAFT --- DRAFT --- DRAFT --- DRAFT ---}}
+
+\title	{Togra}
+\authorinfo
+	{AUTHORS}
+	{ORGANISATION}
+	{EMAIL}
+\maketitle
+
+\makeatactive
+
+
+% ------------------------------------------------------------------------------------------------
+\begin{abstract}
+some stuff
+
+\end{abstract}
+
+
+% ------------------------------------------------------------------------------------------------
+\section{Introduction}
+\begin{itemize}
+\item	We want a declarative interface between Haskell and OpenGL. By declarative we mean not all based around the IO monad. OpenGL is naturally a stream processing system, but the current Haskell API turns it into an exercise in IO monad programming.
+
+\item	Togra expresss GL operations in terms of stream processors, instead of imperative sequences of commands. This lets us infer shaders and perform optimisations on the GL code, both of which come naturally as properties of the stream representation.
+
+\item	We want to do everything in terms of streams, though with this approach there are difficult questions concerning data locality. How do we manage what data is on the card vs in main memory? We also want to support operations like applying transforms to the CTM, and then reading the transformed CTM back.
+
+\item	Togra is a low level library aiming to support all operations available on the hardware. This sets up apart from existing high-level languages such as Gloss, which is based around render trees. 
+
+\item	Motto: ``Take GL and make it strongly typed"
+
+
+\end{itemize}
+
+
+% -------------------------------------------------------------------------------------------------
+\section{Shaders and Arrows}
+\begin{itemize}
+\item	We want to infer GL shaders from the stream process.
+
+\item	We can't do this with GHC rules, as inference of shaders requires analysis. GHC rules are unconditional rewrites, and we may or may not want to perform a rewrite depending on the capability of the target hardware.
+
+\item	Potential issue with arrows: Arrows have only one input, though there are hacks to handle multiple inputs. Arrows are not very good for representing graphs.
+
+\end{itemize}
+
+% -------------------------------------------------------------------------------------------------
+\clearpage{}
+\section{Meta Stream Processors}
+\begin{code}
+data MSP a b where
+  In         :: [b] -> MSP a b
+
+  App        :: MSP (Either (MSP a b) a) b
+  FApp       :: MSP (Either (a -> b) a)  b
+
+  Batch      :: Int -> MSP a [a]
+  Unbatch    :: MSP [a] a
+
+  Arr        :: (a -> b) -> MSP a b
+
+  First      :: MSP a b -> MSP (a, c) (b, c)
+  -- no Second?
+
+  Dot        :: MSP b c -> MSP a b -> MSP a c
+  Par        :: MSP a b -> MSP a c -> MSP a (b, c)
+  
+  ESP        :: SP IO a b -> MSP a b 
+\end{code}
+
+% -------------------------------------------------------------------------------------------------
+\paragraph{Acknowledgements}
+\bibliographystyle{abbrvnat}
+\bibliography{Main}
+
+\end{document}

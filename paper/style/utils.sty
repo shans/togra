@@ -1,0 +1,41 @@
+
+
+% -- Meta commands ------------------------------------------------------------
+\newcommand{\note}	[1]	{\textbf{(NOTE: #1)}}
+
+% -- Short forms --------------------------------------------------------------
+\newcommand{\trm}	[1]	{\textrm{#1}}
+\newcommand{\tbf}	[1]	{\textbf{#1}}
+\newcommand{\trb}	[1]	{\textrm{\textbf{#1}}}
+\newcommand{\un}	[1]	{\underline{#1}}
+\newcommand{\ov}	[1]	{\overline{#1}}
+\newcommand{\qq}		{\quad \quad}
+\newcommand{\mc}	[2]	{\multicolumn{#1}{l}{#2}}
+
+% -- Operators ----------------------------------------------------------------
+\newcommand\equalsdef		{\stackrel{\trm{def}}{=}}
+\newcommand\To			{\Rightarrow}
+\newcommand\toa[1]		{\stackrel{#1}{\rightarrow}}
+\newcommand\longto		{\longrightarrow}
+\newcommand\longtoa[1]		{\stackrel{#1}{\longrightarrow}}
+\newcommand\eto			{\longrightarrow}
+\newcommand\lto			{\leadsto}
+\newcommand\mtoa[1]		{\stackrel{#1}{\mapsto}}
+\newcommand\tme			{\sqsupseteq}
+\newcommand\tle			{\sqsubseteq}
+
+% -- Type Macros --------------------------------------------------------------
+\newcommand{\tyForall}	[3]	{\forall(#1 : #2). \: #3}
+\newcommand{\tyForallB}	[3]	{\forall(#1 \sqsupseteq #2). \: #3}
+
+\newcommand{\kiPi}	[3]	{\Pi(#1 : #2). \: #3}
+
+
+% -- Term Macros --------------------------------------------------------------
+\newcommand{\teLAM}	[3]	{\Lambda(#1 : #2). \: #3}
+\newcommand{\teLAMB}	[4]	{\Lambda(#1 \sqsupseteq #2 : #3). \: #4}
+\newcommand{\teLam}	[3]	{\lambda(#1 : #2). \: #3}
+\newcommand{\teLet}	[3]	{\klet~ #1 = #2~ \kin~ #3}
+\newcommand{\teLetR}	[3]	{\kletregion~ #1 ~\kwith~ \{ #2 \} ~\kin~ #3}
+\newcommand{\teLetRE}	[2]	{\kletregion~ #1 ~\kin~ #2}
+\newcommand{\teIf}	[3]	{\kif~ #1 ~\kthen~ #2 ~\kelse~ #3}
